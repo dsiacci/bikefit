@@ -4,6 +4,7 @@
 // model and forgotten. Only the landmarks are kept.
 
 import { FilesetResolver, PoseLandmarker } from './vendor/tasks-vision/vision_bundle.mjs';
+import { frameTimes } from './mp4.js';
 
 export const MODELS = {
   lite: './models/pose_landmarker_lite.task',
@@ -43,20 +44,35 @@ function once(target, event) {
   });
 }
 
-/** Seek and resolve with the presentation time of the frame now shown. */
+/** Seek and wait until the frame at that time is ready. */
 async function seekTo(video, t) {
   const seeked = once(video, 'seeked');
   video.currentTime = t;
   await seeked;
-  if (!('requestVideoFrameCallback' in HTMLVideoElement.prototype)) return video.currentTime;
-  return new Promise((resolve) => {
-    let done = false;
-    const timer = setTimeout(() => { if (!done) { done = true; resolve(video.currentTime); } }, 250);
-    video.requestVideoFrameCallback((now, meta) => {
-      if (done) return;
-      done = true; clearTimeout(timer); resolve(meta.mediaTime);
-    });
-  });
+}
+
+/**
+ * The times to visit: every frame of the file when its boxes can be read (at
+ * most 60 per second), otherwise a regular 30 per second. Each time is paired
+ * with a seek target in the middle of the frame, safe from rounding.
+ */
+async function visitPlan(file, duration) {
+  const times = await frameTimes(file).catch(() => null);
+  const plan = [];
+  if (times && times.length > 1) {
+    let last = -Infinity;
+    for (let i = 0; i < times.length; i++) {
+      const t = times[i];
+      if (t > duration + 1e-3) break;
+      if (t - last < 1 / 60 - 1e-4) continue;
+      const next = times[i + 1] ?? t + (times[i] - times[i - 1]);
+      plan.push({ t, seek: Math.min(duration, (t + next) / 2) });
+      last = t;
+    }
+    return { plan, exact: true };
+  }
+  for (let t = 0; t < duration; t += 1 / 30) plan.push({ t, seek: Math.min(duration, t + 1 / 60) });
+  return { plan, exact: false };
 }
 
 // VIDEO mode wants increasing timestamps for the life of the landmarker, so a
@@ -64,12 +80,14 @@ async function seekTo(video, t) {
 let stampBase = 0;
 
 /**
- * Run the landmarker on every frame of `file`, stepping `step` seconds (1/60 by
- * default; frames repeated in slower videos are skipped). Calls
- * onFrame({index, t, duration, landmarks, video}) after each frame. Returns
- * {width, height, frames: [{t, landmarks|null}]} with normalized landmarks.
+ * Run the landmarker on every frame of `file`. Each frame is drawn into a
+ * canvas no larger than `maxSide` pixels (the model works on a 256-pixel crop
+ * of the person anyway), handed to the model, and overwritten by the next.
+ * Calls onFrame({index, t, duration, landmarks, video}) after each frame.
+ * Returns {width, height, duration, exactTimes, frames: [{t, landmarks|null}]}
+ * with landmarks normalized to the picture.
  */
-export async function extractPoses(file, landmarker, { video, step = 1 / 60, onFrame, signal } = {}) {
+export async function extractPoses(file, landmarker, { video, maxSide = 1280, onFrame, signal } = {}) {
   const url = URL.createObjectURL(file);
   const v = video ?? document.createElement('video');
   v.muted = true;
@@ -81,23 +99,28 @@ export async function extractPoses(file, landmarker, { video, step = 1 / 60, onF
     await loaded;
     const width = v.videoWidth, height = v.videoHeight, duration = v.duration;
     if (!width || !height || !Number.isFinite(duration)) throw new Error('This video has no readable picture.');
+    const scale = Math.min(1, maxSide / Math.max(width, height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
+    const { plan, exact } = await visitPlan(file, duration);
     const frames = [];
-    let lastTime = -1, stamp = stampBase;
-    for (let k = 0; k * step < duration - step / 2; k++) {
+    let stamp = stampBase;
+    for (const step of plan) {
       if (signal?.aborted) throw new DOMException('Stopped', 'AbortError');
-      const t = await seekTo(v, Math.min(duration, k * step + step / 2));
-      if (t === lastTime) continue;
-      lastTime = t;
-      stamp = Math.max(stamp + 1, stampBase + Math.round(t * 1000));
-      const res = landmarker.detectForVideo(v, stamp);
+      await seekTo(v, step.seek);
+      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      stamp = Math.max(stamp + 1, stampBase + Math.round(step.t * 1000));
+      const res = landmarker.detectForVideo(canvas, stamp);
       const landmarks = res.landmarks && res.landmarks[0]
         ? res.landmarks[0].map((p) => ({ x: p.x, y: p.y, z: p.z, visibility: p.visibility }))
         : null;
-      frames.push({ t, landmarks });
-      onFrame?.({ index: frames.length - 1, t, duration, landmarks, video: v });
+      frames.push({ t: step.t, landmarks });
+      onFrame?.({ index: frames.length - 1, t: step.t, duration, landmarks, video: v, total: plan.length });
     }
     stampBase = stamp + 1000;
-    return { width, height, duration, frames };
+    return { width, height, duration, exactTimes: exact, frames };
   } finally {
     v.removeAttribute('src');
     v.load();
