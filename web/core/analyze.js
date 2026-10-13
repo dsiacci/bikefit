@@ -261,7 +261,7 @@ export function analyze(track, settings = {}) {
       axisRatio: ellipse ? ellipse.ratio : null, cameraTurnDeg: ellipse ? ellipse.angleDeg : null,
     },
     warnings: [
-      ...(method === 'ankle-loop' ? ['The pedal axle could not be located from the feet (no point of the shoe turns in a clean circle: flat pedals, a sliding foot or motion blur), so the strokes were cut on the ankle and no millimetres are given.'] : []),
+      ...(method === 'ankle-loop' ? ['The pedal axle could not be located from the feet (no point of the shoe turns in a clean circle: flat pedals, a sliding foot or motion blur). The strokes were cut on the ankle, so the bottom of the stroke is found less precisely (the leg most extended and most bent are not affected), and no millimetres are given.'] : []),
       ...(method === 'pedal-axle' && axle.score > 0.04 ? ['The crank circle was found only roughly: millimetres are approximate.'] : []),
       ...(method === 'pedal-axle' && ellipse && ellipse.ratio < 0.94 ? [`The pedal path looks squeezed sideways: the camera may be turned about ${Math.round(ellipse.angleDeg)}° away from square, which distorts angles.`] : []),
       ...(clean.fsNative < 45 ? [`The video has ${Math.round(clean.fsNative)} frames per second; 60 gives finer measures at the bottom of the stroke.`] : []),
