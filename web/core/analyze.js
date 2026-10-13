@@ -313,15 +313,27 @@ export function analyzeStill(track, settings = {}) {
   const clean = cleanSeries(track, opts);
   if (!clean) throw new Error('No rider was found in this video.');
   const { fs, grid, count } = clean;
-  // Stillness: speed of knee and ankle below 2% of the thigh length per second.
+  // Stillness: over one second around each sample, knee and ankle stay within
+  // 5% of the thigh length (landmark jitter is a pixel or two; pedalling moves
+  // the ankle by a whole crank circle).
   const thigh = median(Array.from({ length: count }, (_, i) => dist(grid.hip.x[i], grid.hip.y[i], grid.knee.x[i], grid.knee.y[i])));
   const still = new Uint8Array(count);
-  for (let i = 1; i < count; i++) {
-    const v = Math.max(
-      dist(grid.knee.x[i], grid.knee.y[i], grid.knee.x[i - 1], grid.knee.y[i - 1]),
-      dist(grid.ankle.x[i], grid.ankle.y[i], grid.ankle.x[i - 1], grid.ankle.y[i - 1]),
-    ) * fs;
-    still[i] = v < 0.02 * thigh ? 1 : 0;
+  const half = Math.round(fs / 2);
+  for (let i = half; i < count - half; i++) {
+    let ok = true;
+    for (const j of ['knee', 'ankle']) {
+      for (const c of ['x', 'y']) {
+        let lo = Infinity, hi = -Infinity;
+        for (let k = i - half; k <= i + half; k++) {
+          const v = grid[j][c][k];
+          if (!Number.isFinite(v)) { lo = -Infinity; break; }
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        }
+        if (!(hi - lo < 0.05 * thigh)) ok = false;
+      }
+    }
+    still[i] = ok ? 1 : 0;
   }
   let best = null, start = -1;
   for (let i = 0; i <= count; i++) {

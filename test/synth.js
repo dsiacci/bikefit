@@ -38,6 +38,7 @@ export const BASE = {
   dropRate: 0, // chance per frame of no pose at all
   lead: 0, // seconds standing still before pedalling
   tail: 0, // seconds standing still after
+  phase0: 0, // crank angle at the start, degrees
   seed: 1,
 };
 
@@ -135,7 +136,7 @@ export function makeTrack(overrides = {}) {
     t[f] = time;
     if (rand() < p.dropRate) continue;
     const pedalTime = Math.min(Math.max(time - p.lead, 0), p.seconds);
-    const phi = (pedalTime * p.cadence * 6) % 360; // degrees; stands still before and after
+    const phi = (p.phase0 + pedalTime * p.cadence * 6) % 360; // degrees; stands still before and after
     const qn = pose(p, phi), qf = pose(p, (phi + 180) % 360);
     if (swapLeft > 0) swapLeft--;
     else if (rand() < p.swapRate) swapLeft = 1 + Math.floor(rand() * 6);
