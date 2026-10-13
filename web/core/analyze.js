@@ -24,18 +24,23 @@ export const DEFAULTS = {
   ranges: null, // published ranges to compare with; null means the list in ranges.js
 };
 
+// What the page shows, in the conventions of the published ranges: the knee and
+// the elbow as a bend (0° is a straight limb), the other angles as defined in
+// the README. `internal` values (included angles, 180° straight) feed the
+// geometry and the experiments.
 export const METRICS = [
-  { key: 'kneeBdc', label: 'Knee angle at the bottom of the stroke', unit: '°' },
-  { key: 'kneeMaxExt', label: 'Knee angle, most extended', unit: '°' },
-  { key: 'kneeMin', label: 'Knee angle, most bent (top of the stroke)', unit: '°' },
+  { key: 'kneeFlexBdc', label: 'Knee bend at the bottom of the stroke', unit: '°' },
+  { key: 'kneeFlexMin', label: 'Knee bend, leg most extended', unit: '°' },
+  { key: 'kneeFlexMax', label: 'Knee bend, leg most bent', unit: '°' },
+  { key: 'hipClosed', label: 'Hip angle, most closed (trunk to thigh)', unit: '°' },
   { key: 'ankleRom', label: 'Ankle range of motion', unit: '°' },
-  { key: 'ankleBdc', label: 'Ankle angle at the bottom of the stroke', unit: '°' },
-  { key: 'hipMin', label: 'Hip angle, most closed', unit: '°' },
   { key: 'trunk', label: 'Trunk angle above horizontal', unit: '°' },
   { key: 'shoulder', label: 'Shoulder angle (trunk to upper arm)', unit: '°' },
-  { key: 'elbow', label: 'Elbow angle', unit: '°' },
+  { key: 'elbowFlex', label: 'Elbow bend', unit: '°' },
   { key: 'cadence', label: 'Cadence', unit: 'rpm' },
 ];
+
+const INTERNAL = ['kneeBdc', 'kneeMaxExt', 'kneeMin', 'ankleBdc', 'hipMin', 'elbow'];
 
 const JOINTS = ['ear', 'shoulder', 'elbow', 'wrist', 'hip', 'knee', 'ankle', 'heel', 'toe'];
 
@@ -179,6 +184,11 @@ export function analyze(track, settings = {}) {
       trunk: median(upper[0]),
       shoulder: median(upper[1]),
       elbow: median(upper[2]),
+      kneeFlexBdc: 180 - at(ang.knee, s.bdc),
+      kneeFlexMin: 180 - Math.max(...knee),
+      kneeFlexMax: 180 - Math.min(...knee),
+      hipClosed: Math.min(...hip),
+      elbowFlex: 180 - median(upper[2]),
       thighPx: median(segmentValues(ang.thigh, s.i0, s.i1)),
       shankPx: median(segmentValues(ang.shank, s.i0, s.i1)),
       hipAnklePxBdc: at(ang.hipAnkle, s.bdc),
@@ -191,7 +201,7 @@ export function analyze(track, settings = {}) {
   if (valid.length < 10) throw new Error(`Only ${valid.length} clean pedal strokes were found; at least 10 are needed. Pedal steadily for a full minute, seen from the side.`);
 
   const summary = {};
-  for (const m of METRICS) summary[m.key] = summarize(valid.map((r) => r[m.key]));
+  for (const key of [...METRICS.map((m) => m.key), ...INTERNAL]) summary[key] = summarize(valid.map((r) => r[key]));
 
   // Scale and leg geometry, from the medians over clean strokes.
   const mmPerPx = opts.crankMm ? opts.crankMm / axle.r : null;
@@ -202,19 +212,20 @@ export function analyze(track, settings = {}) {
 
   const ranges = opts.ranges ?? RANGES;
   const comparisons = ranges.map((range) => compareToRange(range, summary[range.metric])).filter(Boolean);
-  const kneeRange = ranges.find((r) => r.metric === 'kneeBdc' && r.useForSaddle);
+  // The saddle range is a knee bend; the leg triangle works on the included
+  // angle (180 minus the bend).
+  const kneeRange = ranges.find((r) => r.metric === 'kneeFlexBdc' && r.useForSaddle);
   let saddle = null;
   if (kneeRange && mmPerPx) {
     const current = summary.kneeBdc.median;
-    const change = (target) => saddleChangeForKneeAngle({ T, S, currentDeg: current, targetDeg: target, projection }) * mmPerPx;
-    const mid = (kneeRange.low + kneeRange.high) / 2;
+    const change = (bend) => saddleChangeForKneeAngle({ T, S, currentDeg: current, targetDeg: 180 - bend, projection }) * mmPerPx;
     saddle = {
       range: [kneeRange.low, kneeRange.high],
       toLow: change(kneeRange.low),
       toHigh: change(kneeRange.high),
-      toMiddle: change(mid),
+      toMiddle: change((kneeRange.low + kneeRange.high) / 2),
       notchMm: opts.notchMm || null,
-      perDegreeMm: change(current + 1),
+      perDegreeMm: -change(180 - current + 1),
       source: kneeRange.source,
     };
     if (opts.notchMm) saddle.toMiddleNotches = saddle.toMiddle / opts.notchMm;
@@ -277,6 +288,8 @@ function phaseCurves(ang, phi, all, perStroke) {
       out[key].median.push(s.median); out[key].q1.push(s.q1); out[key].q3.push(s.q3);
     }
   }
+  // The knee as a bend (0° straight), the convention of the published ranges.
+  out.kneeBend = { median: out.knee.median.map((v) => 180 - v), q1: out.knee.q3.map((v) => 180 - v), q3: out.knee.q1.map((v) => 180 - v) };
   return out;
 }
 
@@ -369,6 +382,7 @@ export function analyzeStill(track, settings = {}) {
     version: VERSION,
     still: { start: clean.t0 + best.start / fs, end: clean.t0 + best.end / fs },
     knee: summarize(knee, { boot: 0 }),
+    kneeBend: summarize(knee.map((v) => 180 - v), { boot: 0 }),
     thighBelowHorizontal: summarize(thighInc, { boot: 0 }),
     shankAboveHorizontalFront: summarize(shankInc, { boot: 0 }),
     facing: facingGuess > 0 ? 'right' : 'left',

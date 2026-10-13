@@ -124,6 +124,7 @@ th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var
 thead th { color: var(--muted); font-weight: 600; font-size: .9rem; }
 td.v-within { color: var(--good); }
 td.v-below, td.v-above { color: var(--warn); }
+td.v-guide { color: var(--muted); }
 .quality { margin: 0; padding-left: 20px; color: var(--muted); display: grid; gap: 4px; }
 .downloads { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 8px; }
 .downloads button.primary { margin-top: 0; }

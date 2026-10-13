@@ -8,7 +8,7 @@ import { lockNetwork, lockHolds } from './lock.js';
 import { drawPreview, drawLoopFrame } from './skeleton.js';
 import { curveChart, strokeChart, attachHover, curveScales, strokeScales } from './charts.js';
 import { buildReport } from './report.js';
-import { fmt, verdictSentence, saddleSentence } from './text.js';
+import { fmt, verdictSentence, verdictWord, saddleSentence } from './text.js';
 
 const APP_NAME = 'bikefit';
 const $ = (id) => document.getElementById(id);
@@ -142,9 +142,9 @@ async function measure(file) {
 function render(r) {
   const s = r.summary;
   const comps = Object.fromEntries(r.comparisons.map((c) => [c.metric, c]));
-  $('knee-big').textContent = fmt(s.kneeBdc.median, '°');
-  $('knee-spread').textContent = `Middle half of your strokes: ${fmt(s.kneeBdc.q1, '°')} to ${fmt(s.kneeBdc.q3, '°')}, over ${s.kneeBdc.n} clean strokes.`;
-  const kc = comps.kneeBdc ?? null;
+  $('knee-big').textContent = fmt(s.kneeFlexBdc.median, '°');
+  $('knee-spread').textContent = `Middle half of your strokes: ${fmt(s.kneeFlexBdc.q1, '°')} to ${fmt(s.kneeFlexBdc.q3, '°')}, over ${s.kneeFlexBdc.n} clean strokes. 0° would be a straight leg.`;
+  const kc = comps.kneeFlexBdc ?? null;
   $('knee-verdict').textContent = verdictSentence(kc);
   $('knee-verdict').dataset.v = kc ? kc.verdict : 'none';
   $('saddle-text').textContent = saddleSentence(r.saddle, Boolean(r.settings.crankMm));
@@ -160,12 +160,12 @@ function render(r) {
       text: (i) => [`${fmt(data.median[i], '°')}`, `${label.toLowerCase()} at ${fmt(r.curves.crankDeg[i], '°', 0)} of crank`, `middle half ${fmt(data.q1[i], '°')} to ${fmt(data.q3[i], '°')}`],
     });
   };
-  curve('knee', 'chart-knee', 'Knee angle', kc);
+  curve('kneeBend', 'chart-knee', 'Knee bend', kc);
   curve('hip', 'chart-hip', 'Hip angle');
   curve('ankle', 'chart-ankle', 'Ankle angle');
   const valid = r.perStroke.filter((x) => x.valid);
-  const sdata = { t: valid.map((x) => x.t0), values: valid.map((x) => x.kneeBdc), median: s.kneeBdc.median, range: kc };
-  $('chart-strokes').innerHTML = strokeChart({ ...sdata, label: 'Knee angle at the bottom of each stroke' });
+  const sdata = { t: valid.map((x) => x.t0), values: valid.map((x) => x.kneeFlexBdc), median: s.kneeFlexBdc.median, range: kc };
+  $('chart-strokes').innerHTML = strokeChart({ ...sdata, label: 'Knee bend at the bottom of each stroke' });
   const ss = strokeScales(sdata);
   attachHover($('chart-strokes').querySelector('svg'), {
     xs: sdata.t, ys: sdata.values, xToPlot: ss.x, yToPlot: ss.y, tooltip: tip,
@@ -181,21 +181,21 @@ function render(r) {
       m.label,
       fmt(s[m.key].median, m.unit === '°' ? '°' : ` ${m.unit}`),
       `${fmt(s[m.key].q1, m.unit === '°' ? '°' : '')} to ${fmt(s[m.key].q3, m.unit === '°' ? '°' : '')}`,
-      c ? `${fmt(c.low, '°', 0)} to ${fmt(c.high, '°', 0)} (${c.source.short})` : 'none we could check',
-      c ? c.verdict : '',
+      c ? `${fmt(c.low, '°', 0)} to ${fmt(c.high, '°', 0)} (${c.evidence === 'peer-reviewed' ? '' : `${c.evidence}: `}${c.source.short})` : 'none we could check',
+      verdictWord(c),
     ];
     cells.forEach((text, k) => {
       const td = document.createElement(k === 0 ? 'th' : 'td');
       if (k === 0) td.scope = 'row';
       td.textContent = text;
-      if (k === 4 && c) td.className = `v-${c.verdict}`;
+      if (k === 4 && c) td.className = c.evidence === 'peer-reviewed' ? `v-${c.verdict}` : 'v-guide';
       tr.append(td);
     });
     return tr;
   }));
-  const sources = [...new Map(r.comparisons.map((c) => [c.source.short, c.source])).values()];
+  const sources = [...new Map(r.comparisons.flatMap((c) => [c.source, c.source.also].filter(Boolean)).map((x) => [x.cite, x])).values()];
   $('sources').textContent = sources.length
-    ? `Sources: ${sources.map((x) => x.cite).join(' · ')}`
+    ? `Sources: ${sources.map((x) => x.cite).join(' · ')} Only the two knee ranges come from peer-reviewed measurements; the other figures are book or manufacturer guidelines, shown for context.`
     : 'No published range is shown yet: ranges appear here only with a source we could check.';
 
   // How the video was read.

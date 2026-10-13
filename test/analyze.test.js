@@ -6,7 +6,7 @@ import { makeTrack, truth, BASE } from './synth.js';
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''}: ${a} vs ${b}`);
 
 // Test fixture only, not a published range: lets the saddle arithmetic run.
-const FIXTURE_RANGE = { metric: 'kneeBdc', low: 140, high: 150, kind: 'dynamic', useForSaddle: true, source: { short: 'test fixture' } };
+const FIXTURE_RANGE = { metric: 'kneeFlexBdc', low: 30, high: 40, kind: 'dynamic', evidence: 'peer-reviewed', useForSaddle: true, source: { short: 'test fixture' } };
 
 test('clean synthetic rider: every angle within half a degree of the truth', () => {
   const { track, params } = makeTrack({ seconds: 50 });
@@ -18,6 +18,8 @@ test('clean synthetic rider: every angle within half a degree of the truth', () 
   close(r.summary.cadence.median, params.cadence, 0.5, 'cadence');
   close(r.calibration.crankPx, params.crank * params.scale, 1, 'crank in pixels');
   close(r.calibration.mmPerPx, 1 / params.scale, 0.02, 'mm per pixel');
+  close(r.summary.kneeFlexBdc.median, 180 - want.kneeBdc, 0.5, 'knee bend at BDC');
+  close(r.summary.elbowFlex.median, 180 - want.elbow, 0.5, 'elbow bend');
   assert.equal(r.side.facing, 'right');
   assert.equal(r.side.toesPoint, 'right');
 });
@@ -59,5 +61,5 @@ test('the suggested saddle change brings the knee to the middle of the range', (
   assert.ok(low.saddle.toMiddle > 0, 'saddle too low: raise it');
   const fixed = analyze(makeTrack({ seconds: 40, hipFromBb: BASE.hipFromBb - 25 + low.saddle.toMiddle }).track, { crankMm: 170, ranges: [FIXTURE_RANGE] });
   close(fixed.summary.kneeBdc.median, 145, 0.6, 'knee after the suggested change');
-  assert.equal(low.comparisons[0].verdict, 'below');
+  assert.equal(low.comparisons[0].verdict, 'above'); // saddle low: the knee stays more bent
 });

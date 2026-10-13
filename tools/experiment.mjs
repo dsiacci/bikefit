@@ -19,7 +19,8 @@ import { join } from 'node:path';
 import { analyze, analyzeStill, predictKneeChange } from '../web/core/analyze.js';
 import { median, quantile, rng } from '../web/core/signal.js';
 
-const KEYS = ['kneeBdc', 'kneeMaxExt', 'kneeMin', 'ankleRom', 'ankleBdc', 'hipMin', 'trunk', 'shoulder', 'elbow', 'cadence'];
+// Reported in the conventions of the page: knee and elbow as a bend (0° straight).
+const KEYS = ['kneeFlexBdc', 'kneeFlexMin', 'kneeFlexMax', 'hipClosed', 'ankleRom', 'ankleBdc', 'trunk', 'shoulder', 'elbowFlex', 'cadence'];
 
 async function load(dir, crankMm) {
   const result = JSON.parse(await readFile(join(dir, 'result.json'), 'utf8'));
@@ -74,9 +75,9 @@ for (const k of KEYS) {
 }
 for (let i = 1; i < cfg.baseline.length; i++) {
   const a = cfg.baseline[0], b = cfg.baseline[i];
-  const d = diffOfMedians(strokesOf(runs[a].result, 'kneeBdc'), strokesOf(runs[b].result, 'kneeBdc'));
-  out.repeatability[`kneeBdc_${b}_minus_${a}`] = d;
-  lines.push('', `Knee at the bottom, ${b} − ${a}: ${f1(d.diff)}° (95% interval ${f1(d.ci95[0])} to ${f1(d.ci95[1])}).`);
+  const d = diffOfMedians(strokesOf(runs[a].result, 'kneeFlexBdc'), strokesOf(runs[b].result, 'kneeFlexBdc'));
+  out.repeatability[`kneeFlexBdc_${b}_minus_${a}`] = d;
+  lines.push('', `Knee bend at the bottom, ${b} − ${a}: ${f1(d.diff)}° (95% interval ${f1(d.ci95[0])} to ${f1(d.ci95[1])}).`);
 }
 
 // 2. Sensitivity: saddle raised by a measured amount.
@@ -87,12 +88,13 @@ const T = median(base.map((r) => r.geometry.thighToCrank)) * cfg.crankMm;
 const S = median(base.map((r) => r.geometry.shankToCrank)) * cfg.crankMm;
 const dMm = median(pooled('hipAnklePxBdc')) * mm;
 const projection = median(base.map((r) => r.geometry.projection));
-lines.push('', '## Sensitivity (saddle raised)', '', '| Video | Saddle change (tape) | Knee change, measured | Knee change, predicted | Ankle change at the bottom | Hip moved (video) |', '|---|---|---|---|---|---|');
+lines.push('', '## Sensitivity (saddle raised)', '', '| Video | Saddle change (tape) | Knee bend change, measured | Knee bend change, predicted | Ankle change at the bottom | Hip moved (video) |', '|---|---|---|---|---|---|');
 for (const [name, deltaMm] of Object.entries(cfg.raised ?? {})) {
   const r = runs[name].result;
-  const knee = diffOfMedians(pooled('kneeBdc'), strokesOf(r, 'kneeBdc'));
+  const knee = diffOfMedians(pooled('kneeFlexBdc'), strokesOf(r, 'kneeFlexBdc'));
   const ankle = diffOfMedians(pooled('ankleBdc'), strokesOf(r, 'ankleBdc'));
-  const predicted = predictKneeChange({ T, S, d: dMm, deltaSaddle: deltaMm, projection });
+  // The leg triangle predicts the included angle; the bend changes by the opposite amount.
+  const predicted = -predictKneeChange({ T, S, d: dMm, deltaSaddle: deltaMm, projection });
   // With the tripod untouched, the hip itself moves in the picture.
   const hipBase = [median(base.flatMap((b) => b.perStroke.filter((s) => s.valid).map((s) => s.hipBdc[0]))), median(base.flatMap((b) => b.perStroke.filter((s) => s.valid).map((s) => s.hipBdc[1])))];
   const hipNow = [median(r.perStroke.filter((s) => s.valid).map((s) => s.hipBdc[0])), median(r.perStroke.filter((s) => s.valid).map((s) => s.hipBdc[1]))];
@@ -112,18 +114,18 @@ if (cfg.runs.S && cfg.inclinometer) {
   // ankle is behind the knee, 180 minus the reading when the ankle is ahead of it.
   const reading = median(cfg.inclinometer.shankDeg);
   const shank = cfg.inclinometer.ankle === 'behind' ? reading : cfg.inclinometer.ankle === 'ahead' ? 180 - reading : 90;
-  const kneeIncl = thigh + shank;
+  const kneeBendIncl = 180 - (thigh + shank);
   out.reference = {
-    model: { knee: still.knee.median, thigh: still.thighBelowHorizontal.median, shank: still.shankAboveHorizontalFront.median },
-    inclinometer: { knee: kneeIncl, thigh, shank },
-    differenceKnee: still.knee.median - kneeIncl,
-    dynamicMinusStatic: median(pooled('kneeBdc')) - still.knee.median,
+    model: { kneeBend: still.kneeBend.median, thigh: still.thighBelowHorizontal.median, shank: still.shankAboveHorizontalFront.median },
+    inclinometer: { kneeBend: kneeBendIncl, thigh, shank },
+    differenceKneeBend: still.kneeBend.median - kneeBendIncl,
+    dynamicMinusStatic: median(pooled('kneeFlexBdc')) - still.kneeBend.median,
   };
   lines.push('', '## Reference (still pose, crank down)', '', '| | Model | Inclinometer | Difference |', '|---|---|---|---|',
     `| Thigh below horizontal | ${f1(still.thighBelowHorizontal.median)}° | ${f1(thigh)}° | ${f1(still.thighBelowHorizontal.median - thigh)}° |`,
     `| Shank (from the front) | ${f1(still.shankAboveHorizontalFront.median)}° | ${f1(shank)}° | ${f1(still.shankAboveHorizontalFront.median - shank)}° |`,
-    `| Knee angle | ${f1(still.knee.median)}° | ${f1(kneeIncl)}° | ${f1(still.knee.median - kneeIncl)}° |`,
-    '', `Pedalling (median of the baseline strokes) minus still pose, knee at the bottom: ${f1(out.reference.dynamicMinusStatic)}°.`);
+    `| Knee bend | ${f1(still.kneeBend.median)}° | ${f1(kneeBendIncl)}° | ${f1(still.kneeBend.median - kneeBendIncl)}° |`,
+    '', `Knee bend at the bottom, pedalling (median of the baseline strokes) minus still pose: ${f1(out.reference.dynamicMinusStatic)}°.`);
 }
 
 const text = lines.join('\n');

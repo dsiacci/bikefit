@@ -133,23 +133,33 @@ export function drawLoopFrame(canvas, loop, i, { showArc = true } = {}) {
   if (showArc && fr.hip && fr.knee && fr.ankle) drawKneeArc(ctx, P(fr.hip), P(fr.knee), P(fr.ankle), fr.kneeAngle, c, s);
 }
 
+// The knee bend: the angle between the thigh carried on past the knee and the
+// shank, the number the page reports (0° is a straight leg).
 function drawKneeArc(ctx, H, K, A, angleDeg, c, s) {
-  const a1 = Math.atan2(H[1] - K[1], H[0] - K[0]);
+  const a1 = Math.atan2(K[1] - H[1], K[0] - H[0]);
   const a2 = Math.atan2(A[1] - K[1], A[0] - K[0]);
   let d = a2 - a1;
   while (d <= -Math.PI) d += 2 * Math.PI;
   while (d > Math.PI) d -= 2 * Math.PI;
-  const r = 0.55 * s;
+  const r = 0.75 * s;
+  ctx.save();
+  ctx.strokeStyle = c.faint;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(K[0], K[1]);
+  ctx.lineTo(K[0] + Math.cos(a1) * r * 1.25, K[1] + Math.sin(a1) * r * 1.25);
+  ctx.stroke();
+  ctx.restore();
   ctx.strokeStyle = c.arc;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
   ctx.arc(K[0], K[1], r, a1, a1 + d, d < 0);
   ctx.stroke();
   const mid = a1 + d / 2;
-  const label = `${Math.round(angleDeg)}°`;
   ctx.fillStyle = c.ink;
-  ctx.font = '600 14px system-ui, -apple-system, "Segoe UI", sans-serif';
+  ctx.font = '600 15px system-ui, -apple-system, "Segoe UI", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, K[0] + Math.cos(mid) * (r + 18), K[1] + Math.sin(mid) * (r + 18));
+  ctx.fillText(`${Math.round(180 - angleDeg)}°`, K[0] + Math.cos(mid) * (r + 20), K[1] + Math.sin(mid) * (r + 20));
 }

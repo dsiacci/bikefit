@@ -11,10 +11,28 @@ function signedMm(v) {
   return `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r)} mm`;
 }
 
+const BEND = new Set(['kneeFlexBdc', 'kneeFlexMin', 'kneeFlexMax', 'elbowFlex']);
+
+/** Short verdict for a table cell. */
+export function verdictWord(c) {
+  if (!c) return '';
+  if (c.evidence !== 'peer-reviewed') return c.verdict === 'within' ? 'inside the guideline' : 'outside the guideline';
+  if (c.verdict === 'within') return 'within';
+  if (BEND.has(c.metric)) return c.verdict === 'below' ? 'less bent' : 'more bent';
+  return c.verdict;
+}
+
 export function verdictSentence(c) {
   if (!c) return 'No published range we could check for this measure, so no verdict.';
-  const where = c.verdict === 'within' ? 'Within' : c.verdict === 'below' ? 'Below' : 'Above';
-  return `${where} the published range of ${fmt(c.low, '°', 0)} to ${fmt(c.high, '°', 0)} (${c.kind} measurement, ${c.source.short}).`;
+  const span = `${fmt(c.low, '°', 0)} to ${fmt(c.high, '°', 0)}`;
+  if (c.evidence !== 'peer-reviewed') {
+    const what = c.evidence === 'book' ? 'a book' : 'a bike-fit system maker';
+    return `${c.verdict === 'within' ? 'Inside' : 'Outside'} the ${span} guideline from ${what} (${c.source.short}). No validated range exists for this angle.`;
+  }
+  const where = c.verdict === 'within' ? 'Within'
+    : BEND.has(c.metric) ? (c.verdict === 'below' ? 'Less bent than' : 'More bent than')
+      : c.verdict === 'below' ? 'Below' : 'Above';
+  return `${where} the published range of ${span}, measured while pedalling (${c.source.short}).`;
 }
 
 export function saddleSentence(saddle, crankGiven = true) {

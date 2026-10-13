@@ -52,18 +52,31 @@ The longest stretch of steady pedalling is found from the periodicity of the ank
 
 | Measure | Definition (near side, in the image plane) | Per stroke |
 |---|---|---|
-| Knee angle | between hip–knee and knee–ankle; 180° is a straight leg | at the bottom of the stroke; most extended; most bent |
-| Ankle angle | between knee–ankle and ankle–toe | value at the bottom; range of motion over the stroke |
-| Hip angle | between shoulder–hip and hip–knee | most closed |
-| Trunk angle | hip–shoulder line above the horizontal | median |
-| Shoulder angle | between shoulder–hip and shoulder–elbow | median |
-| Elbow angle | between shoulder–elbow and elbow–wrist | median |
+| Knee bend | 180° minus the angle between hip–knee and knee–ankle; 0° is a straight leg | at the bottom of the stroke (crank straight down); leg most extended; leg most bent |
+| Ankle | angle between knee–ankle and ankle–toe | range of motion over the stroke; value at the bottom |
+| Hip | angle between shoulder–hip and hip–knee | most closed |
+| Trunk | hip–shoulder line above the horizontal | median |
+| Shoulder | angle between shoulder–hip and shoulder–elbow | median |
+| Elbow bend | 180° minus the angle between shoulder–elbow and elbow–wrist | median |
 
 The page reports the median over clean strokes, the middle half (first to third quartile), and a bootstrap 95 % interval of the median.
 
 ### 7. Published ranges
 
-⟦table: measure, range, static or dynamic, source; only ranges we could check⟧
+| Measure | Range | Measured | Evidence | Source |
+|---|---|---|---|---|
+| Knee bend at the bottom of the stroke | 33–43° | pedalling, low intensity, 2D video with skin markers | peer-reviewed | [Millour et al. 2019](https://doi.org/10.37190/ABB-01428-2019-02); [Swart & Holliday 2019](https://doi.org/10.1249/JSR.0000000000000665) |
+| Knee bend, leg most extended | 30–40° | pedalling, 2D video | peer-reviewed | [Ferrer-Roca et al. 2012](https://doi.org/10.1519/JSC.0b013e318245c09d) |
+| Knee bend, leg most bent | 107–113° | pedalling, 3D system | manufacturer | Retül ranges printed in [Scoz et al. 2021](https://doi.org/10.1136/bmjsem-2021-001096) |
+| Hip, most closed | 66–76° | pedalling, 3D system | manufacturer | Retül, in Scoz et al. 2021 |
+| Ankle range of motion | 20–30° | pedalling, 3D system | manufacturer | Retül, in Scoz et al. 2021 |
+| Trunk above horizontal | 45–55° | static, recreational riders, hands on the hoods | book | Phil Burt, *Bike Fit* (2014), reported in [Holliday & Swart 2021](https://doi.org/10.1016/j.smhs.2021.02.007) |
+| Shoulder | 60–70° | pedalling, 3D system | manufacturer | Retül, in Scoz et al. 2021 |
+| Elbow bend | 20–30° | static, hands on the hoods | book | Burt 2014, in Holliday & Swart 2021 |
+
+The best-known number, 25–35° of knee bend (Holmes, Pruitt & Whalen 1994), is a static measure: the rider stops with the crank at the bottom and a fitter uses a goniometer. Pedalling bends the knee about 8° more at the same crank position ([Millour et al. 2019](https://doi.org/10.37190/ABB-01428-2019-02); [Bini & Hume 2016](https://doi.org/10.1515/humo-2016-0005)), and 33–43° is the static range plus those 8°. The page measures while you pedal, so it uses 33–43°, and that is the range the saddle change aims for.
+
+Only the two knee ranges come from peer-reviewed measurements. For the other joints, Swart & Holliday write that they "have not been investigated to any meaningful extent", and Scoz et al. that "there is little scientific information on joint angular reference values". The page shows the book and manufacturer figures for context, labelled as guidelines, and gives a verdict only against the knee ranges.
 
 ### 8. From degrees to millimetres
 
@@ -85,7 +98,8 @@ Assumptions: the ankle keeps the same position at the bottom of the stroke when 
 ## Limits
 
 - Side view only: nothing about how the knee tracks seen from the front, or about feet and cleats.
-- A 2D pose model on a phone video is accurate to a few degrees, not to one degree. ⟦published accuracy of 2D pose models in cycling⟧
+- A 2D pose model on a phone video is accurate to a few degrees, not to one degree. The only study of MediaPipe in cycling we found ([Bini, Nascimento & Nibali 2024](https://doi.org/10.1007/s11332-023-01075-7): 26 riders on a stationary bike, a camera at saddle height 4 m away, 30 frames per second at 640×480, the Heavy model) reports typical errors of 3 to 6° at the knee and the hip against skin markers, with the knee read as more bent around the bottom of the stroke, and a poor match at the ankle (r = 0.25). Treat the ankle numbers with care. [Fonda et al. 2014](https://doi.org/10.1080/02640414.2013.868919) found that 2D video underestimates the knee angle at the bottom of the stroke compared with 3D motion capture, and suggest adding 2.2° to 2D values.
+- Riders often point the foot more when the saddle goes up, which hides part of the change at the knee; several saddle-height studies report it (for example [Ferrer-Roca et al. 2014](https://doi.org/10.1519/JSC.0b013e3182a1f1a9)).
 - Published ranges describe groups of riders. They are a starting point, not a target for one person.
 - The result is valid for the bike in the video, set up as it was.
 - This is not medical advice. If something hurts, see a professional.

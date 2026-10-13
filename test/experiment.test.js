@@ -41,11 +41,11 @@ test('experiment script: repeatability, sensitivity against prediction, referenc
     execFileSync(process.execPath, ['tools/experiment.mjs', cfgPath], { stdio: 'pipe' });
     const out = JSON.parse(readFileSync(cfgPath.replace(/\.json$/, '.results.json'), 'utf8'));
     for (const n of ['V1', 'V2', 'V3', 'V4']) assert.equal(out.runs[n].rerunIdentical, true, `${n} re-run identical`);
-    assert.ok(out.repeatability.kneeBdc.spread < 0.6, `spread ${out.repeatability.kneeBdc.spread}`);
+    assert.ok(out.repeatability.kneeFlexBdc.spread < 0.6, `spread ${out.repeatability.kneeFlexBdc.spread}`);
     close(out.sensitivity.V3.knee.diff, out.sensitivity.V3.predicted, 0.5, 'knee change vs prediction');
     close(out.sensitivity.V3.hipMovedMm, 9, 1.5, 'hip moved in the picture');
-    close(out.reference.differenceKnee, 0, 1, 'still knee vs inclinometer');
-    close(out.reference.model.knee, trueAngles(BASE, 180).knee, 1, 'still knee vs truth');
+    close(out.reference.differenceKneeBend, 0, 1, 'still knee vs inclinometer');
+    close(out.reference.model.kneeBend, 180 - trueAngles(BASE, 180).knee, 1, 'still knee vs truth');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
