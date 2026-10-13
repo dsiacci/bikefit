@@ -5,7 +5,7 @@
 
 import { nearSeries } from './landmarks.js';
 import { despike, resample, fillGaps, lowpass, median, summarize, at } from './signal.js';
-import { findPedalAxle, axlePath } from './calibration.js';
+import { findPedalAxle, axlePath, axisEllipse } from './calibration.js';
 import { steadyStretch, crankAngle, strokes } from './cycles.js';
 import {
   includedAngle, inclination, dist, saddleProjection, saddleChangeForKneeAngle, predictKneeChange,
@@ -149,6 +149,11 @@ export function analyze(track, settings = {}) {
     heelX: grid.heel.x, heelY: grid.heel.y, toeX: grid.toe.x, toeY: grid.toe.y, ankleX: grid.ankle.x, ankleY: grid.ankle.y,
   }, axle.s, axle.u, axle.footLength);
   const { phi, facing } = crankAngle(path.x, path.y, axle.cx, axle.cy);
+  const steadyAxle = { x: [], y: [] };
+  for (let i = stretch.start; i < stretch.end; i++) {
+    if (Number.isFinite(path.x[i]) && Number.isFinite(path.y[i])) { steadyAxle.x.push(path.x[i]); steadyAxle.y.push(path.y[i]); }
+  }
+  const ellipse = axisEllipse(steadyAxle.x, steadyAxle.y);
   const all = strokes(phi, fs, stretch.start, stretch.end);
   const ang = angleSeries(grid, count, facing);
 
@@ -226,7 +231,13 @@ export function analyze(track, settings = {}) {
     },
     calibration: {
       bottomBracket: [axle.cx, axle.cy], crankPx: axle.r, circleFit: axle.score, axleOffset: [axle.s, axle.u], mmPerPx,
+      axisRatio: ellipse ? ellipse.ratio : null, cameraTurnDeg: ellipse ? ellipse.angleDeg : null,
     },
+    warnings: [
+      ...(axle.score > 0.06 ? ['The crank circle was found only roughly: millimetres are approximate.'] : []),
+      ...(ellipse && ellipse.ratio < 0.94 ? [`The pedal path looks squeezed sideways: the camera may be turned about ${Math.round(ellipse.angleDeg)}° away from square, which distorts angles.`] : []),
+      ...(clean.fsNative < 45 ? [`The video has ${Math.round(clean.fsNative)} frames per second; 60 gives finer measures at the bottom of the stroke.`] : []),
+    ],
     steady: { start: clean.t0 + stretch.start / fs, end: clean.t0 + stretch.end / fs },
     strokes: { total: all.length, valid: valid.length },
     summary,

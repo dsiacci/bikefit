@@ -177,6 +177,57 @@ export function axlePath(foot, s, u, footLength) {
   return { x, y };
 }
 
+/**
+ * Axis-aligned ellipse through points (least squares on A x^2 + C y^2 + D x +
+ * E y = 1 in centred coordinates). Seen square on, the pedal axle draws a
+ * circle; a camera turned away from the bike squeezes it horizontally, so the
+ * ratio of horizontal to vertical axes hints at the camera angle:
+ * cos(angle) = ratio. Returns {rx, ry, ratio, angleDeg} or null.
+ */
+export function axisEllipse(xs, ys) {
+  const n = xs.length;
+  if (n < 5) return null;
+  let mx = 0, my = 0;
+  for (let i = 0; i < n; i++) { mx += xs[i]; my += ys[i]; }
+  mx /= n; my /= n;
+  // Normal equations for [A, C, D, E].
+  const M = Array.from({ length: 4 }, () => new Float64Array(4));
+  const b = new Float64Array(4);
+  for (let i = 0; i < n; i++) {
+    const u = xs[i] - mx, v = ys[i] - my;
+    const row = [u * u, v * v, u, v];
+    for (let r = 0; r < 4; r++) {
+      b[r] += row[r];
+      for (let c = 0; c < 4; c++) M[r][c] += row[r] * row[c];
+    }
+  }
+  const sol = solve(M.map((r) => Array.from(r)), Array.from(b));
+  if (!sol) return null;
+  const [A, C, D, E] = sol;
+  if (!(A > 0 && C > 0)) return null;
+  const G = 1 + (D * D) / (4 * A) + (E * E) / (4 * C);
+  const rx = Math.sqrt(G / A), ry = Math.sqrt(G / C);
+  const ratio = rx / ry;
+  return { rx, ry, ratio, angleDeg: ratio < 1 ? (Math.acos(ratio) * 180) / Math.PI : 0 };
+}
+
+function solve(A, b) {
+  const n = b.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-12) return null;
+    [M[c], M[p]] = [M[p], M[c]];
+    for (let r = 0; r < n; r++) {
+      if (r === c) continue;
+      const f = M[r][c] / M[c][c];
+      for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+    }
+  }
+  return M.map((row, i) => row[n] / row[i]);
+}
+
 function subsample(n, max) {
   if (n <= max) return Array.from({ length: n }, (_, i) => i);
   const step = n / max;

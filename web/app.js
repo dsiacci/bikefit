@@ -206,6 +206,7 @@ function render(r) {
     `Rider facing ${r.side.facing}, near leg labelled ${r.side.nearLeg} by the model${r.side.labelSwitches ? `; left and right labels swapped ${r.side.labelSwitches} times and were corrected` : ''}.`,
   ];
   if (r.side.facing !== r.side.toesPoint) q.push('Warning: the toes and the pedalling direction disagree. Check that the video is not mirrored.');
+  for (const w of r.warnings ?? []) q.push(`Warning: ${w}`);
   $('quality').replaceChildren(...q.map((line) => { const li = document.createElement('li'); li.textContent = line; return li; }));
 
   // One stroke on a loop, at half speed.

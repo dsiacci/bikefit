@@ -47,3 +47,15 @@ test('the most circular point of the foot is the pedal axle, its radius the cran
   close(axle.cy, 860, 2, 'centre y');
   close(axle.r, 0.6 * 170, 2, 'radius');
 });
+
+test('a camera turned 20 degrees squeezes the pedal circle into an ellipse', async () => {
+  const { axisEllipse } = await import('../web/core/calibration.js');
+  const xs = [], ys = [];
+  for (let a = 0; a < 360; a += 2) {
+    xs.push(500 + 100 * Math.cos((20 * Math.PI) / 180) * Math.cos((a * Math.PI) / 180));
+    ys.push(400 + 100 * Math.sin((a * Math.PI) / 180));
+  }
+  const e = axisEllipse(xs, ys);
+  close(e.angleDeg, 20, 0.2, 'camera angle');
+  close(axisEllipse(xs.map((x) => 500 + (x - 500) / Math.cos((20 * Math.PI) / 180)), ys).angleDeg, 0, 0.5, 'square camera');
+});
