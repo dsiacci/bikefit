@@ -1,0 +1,1 @@
+This file exists so the page can check that the network lock holds: once locked, the browser refuses to fetch it.

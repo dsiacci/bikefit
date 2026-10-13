@@ -293,7 +293,7 @@ function representativeLoop(grid, phi, all, perStroke, axle, facing, ang, fs) {
         : null;
     }
     fr.crankDeg = round3((((phi[i] % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) * 180 / Math.PI);
-    fr.knee = round3(ang.knee[i]);
+    fr.kneeAngle = round3(ang.knee[i]);
     frames.push(fr);
   }
   return { frames, fps: fs };

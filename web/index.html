@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>bikefit</title>
+<meta name="description" content="Bike fit angles from a side-view phone video, measured in your browser by an open pose model. The video never leaves your device.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="./"><img src="icon.svg" alt="" width="28" height="28"><span class="app-name">bikefit</span></a>
+  <p class="lock" id="lock" data-state="loading"><span class="lock-dot" aria-hidden="true"></span><span id="lock-text">Loading the pose model…</span></p>
+</header>
+
+<main>
+  <section class="intro">
+    <h1>Bike fit angles from a phone video</h1>
+    <p class="lede">Film yourself pedalling, seen from the side. An open pose model runs inside this page and measures your knee, hip, ankle, trunk and arms at every pedal stroke, then compares the medians with published ranges. Your video stays on your device: nothing is uploaded.</p>
+  </section>
+
+  <div class="layout">
+    <section class="panel" id="input-panel" aria-labelledby="input-title">
+      <h2 id="input-title">Your video</h2>
+      <label class="drop" id="drop" for="file">
+        <input type="file" id="file" accept="video/*">
+        <span class="drop-main" id="drop-main">Choose a video, or drop it here</span>
+        <span class="drop-sub">MP4 or MOV, about a minute of steady pedalling</span>
+      </label>
+      <div class="fields">
+        <div class="field">
+          <label for="crank">Crank length</label>
+          <select id="crank">
+            <option value="160">160 mm</option>
+            <option value="165">165 mm</option>
+            <option value="167.5">167.5 mm</option>
+            <option value="170" selected>170 mm</option>
+            <option value="172.5">172.5 mm</option>
+            <option value="175">175 mm</option>
+            <option value="">I don't know</option>
+          </select>
+          <p class="hint">Printed on the inside of the crank arm. It sets the scale for the millimetres.</p>
+        </div>
+        <div class="field">
+          <label for="notch">Saddle marks on your bike <span class="opt">(optional)</span></label>
+          <div class="unit-input"><input id="notch" type="number" inputmode="decimal" min="1" max="50" step="0.5" placeholder="spacing"><span>mm</span></div>
+          <p class="hint">If your seat post has marks, their spacing turns millimetres into marks.</p>
+        </div>
+      </div>
+      <details class="more">
+        <summary>More settings</summary>
+        <div class="field">
+          <label for="model">Pose model size</label>
+          <select id="model">
+            <option value="lite">Lite: fastest</option>
+            <option value="full" selected>Full: the default</option>
+            <option value="heavy">Heavy: slowest, most precise</option>
+          </select>
+          <p class="hint">Changing it after the page has loaded needs a reload: the page stops all network access once a model is in memory.</p>
+        </div>
+        <label class="check"><input type="checkbox" id="show-frames"> Show the video picture behind the skeleton while measuring</label>
+      </details>
+      <button type="button" class="primary" id="run" disabled>Measure</button>
+      <details class="howto" open>
+        <summary>How to film</summary>
+        <ol>
+          <li>Phone on a tripod, landscape, main lens (1×), 1080p at 60 frames per second if you can.</li>
+          <li>Side view from the drive side, 2 to 3 metres away, lens at hip height, square to the bike.</li>
+          <li>The whole bike and you in the frame, head included: the model finds people by their face.</li>
+          <li>Close-fitting clothes, light in front of you, not behind.</li>
+          <li>About a minute of steady pedalling, seated, easy effort, hands where they usually are.</li>
+        </ol>
+      </details>
+    </section>
+
+    <section class="panel" id="work-panel" aria-live="polite">
+      <div id="idle">
+        <h2>What you get</h2>
+        <ul class="gets">
+          <li>Your knee angle at the bottom of the stroke, stroke by stroke: the angle the knee-angle methods for saddle height look at.</li>
+          <li>Knee, hip and ankle through the whole stroke, trunk, shoulder and elbow angles.</li>
+          <li>The comparison with published ranges, with the source of each range.</li>
+          <li>The saddle change in millimetres that the leg geometry suggests.</li>
+          <li>A report to download and keep, or to bring to a bike fitter.</li>
+        </ul>
+      </div>
+      <div id="progress" hidden>
+        <h2>Measuring</h2>
+        <canvas id="preview" class="stage" aria-label="Skeleton found in the current frame"></canvas>
+        <progress id="bar" max="1" value="0"></progress>
+        <p class="status" id="progress-text">Starting…</p>
+        <button type="button" class="secondary" id="stop">Stop</button>
+      </div>
+      <div id="error" hidden>
+        <h2>That video could not be measured</h2>
+        <p id="error-text"></p>
+        <button type="button" class="secondary" id="again">Try another video</button>
+      </div>
+    </section>
+  </div>
+
+  <section id="results" hidden aria-labelledby="results-title">
+    <h2 id="results-title">Your results</h2>
+    <div class="result-top">
+      <div class="headline">
+        <p class="kicker">Knee angle at the bottom of the stroke</p>
+        <p class="big" id="knee-big">–</p>
+        <p class="spread" id="knee-spread"></p>
+        <p class="verdict" id="knee-verdict"></p>
+        <p class="saddle" id="saddle-text"></p>
+      </div>
+      <figure class="loop">
+        <canvas id="loop" class="stage" aria-label="One pedal stroke drawn as a skeleton"></canvas>
+        <figcaption>One typical stroke from your video, drawn from the landmarks only.</figcaption>
+      </figure>
+    </div>
+
+    <div class="charts">
+      <figure><figcaption>Knee angle through the pedal stroke <span class="sub">median line, middle half of strokes shaded</span></figcaption><div id="chart-knee"></div></figure>
+      <figure><figcaption>Knee angle at the bottom, stroke by stroke</figcaption><div id="chart-strokes"></div></figure>
+      <figure><figcaption>Hip angle through the pedal stroke</figcaption><div id="chart-hip"></div></figure>
+      <figure><figcaption>Ankle angle through the pedal stroke</figcaption><div id="chart-ankle"></div></figure>
+    </div>
+
+    <h3>All measures</h3>
+    <div class="table-wrap">
+      <table id="table">
+        <thead><tr><th scope="col">Measure</th><th scope="col">Median</th><th scope="col">Middle half</th><th scope="col">Published range</th><th scope="col">Verdict</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint" id="sources"></p>
+
+    <h3>How the video was read</h3>
+    <ul class="quality" id="quality"></ul>
+
+    <div class="downloads">
+      <button type="button" class="primary" id="dl-report">Download the report</button>
+      <button type="button" class="secondary" id="dl-json">Download the numbers (JSON)</button>
+    </div>
+  </section>
+
+  <section class="panel limits" aria-labelledby="limits-title">
+    <h2 id="limits-title">What this can and cannot tell you</h2>
+    <ul>
+      <li>Side view only: nothing about how your knee tracks seen from the front, or about your feet and cleats.</li>
+      <li>A 2D pose model on a phone video is accurate to a few degrees, not to one degree.</li>
+      <li>Published ranges describe groups of riders. They are a starting point, not a target for you.</li>
+      <li>The result is valid for the bike in the video, set up as it was.</li>
+      <li>This is not medical advice. If something hurts, see a professional.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>Pose model: <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker">MediaPipe Pose Landmarker</a> by Google, Apache License 2.0, served by this site and run in your browser. Code: <a id="code-link" href="https://github.com/dsiacci/bikefit">github.com/dsiacci/bikefit</a>, Apache License 2.0.</p>
+</footer>
+<div class="tooltip" id="tooltip" role="status" hidden></div>
+<video id="video" muted playsinline class="offscreen"></video>
+</body>
+</html>
