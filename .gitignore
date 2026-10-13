@@ -1,0 +1,32 @@
+# Videos of people never belong in this repository, in any format.
+*.mov
+*.MOV
+*.mp4
+*.MP4
+*.m4v
+*.M4V
+*.webm
+*.mkv
+*.avi
+*.hevc
+*.heic
+*.HEIC
+*.jpg
+*.JPG
+*.jpeg
+*.png
+!docs/*.png
+
+# Keypoints and measurements of real riders stay on the rider's machine.
+private/
+*.keypoints.json
+*.measures.json
+
+# Built or downloaded at build time (see tools/build.mjs).
+web/vendor/
+web/models/
+node_modules/
+dist/
+
+# Local tooling.
+.gstack/

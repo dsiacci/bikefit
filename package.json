@@ -1,0 +1,14 @@
+{
+  "name": "bikefit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bike fit angles from a side-view phone video, measured in the browser with an open-weight pose model. The video never leaves the device.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
