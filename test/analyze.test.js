@@ -63,3 +63,16 @@ test('the suggested saddle change brings the knee to the middle of the range', (
   close(fixed.summary.kneeBdc.median, 145, 0.6, 'knee after the suggested change');
   assert.equal(low.comparisons[0].verdict, 'above'); // saddle low: the knee stays more bent
 });
+
+test('a foot sliding on a flat pedal: strokes from the ankle loop, no millimetres', () => {
+  const { track, params } = makeTrack({ seconds: 40, noise: 1.5, slide: 70, seed: 12 });
+  const r = analyze(track, { crankMm: 170, ranges: [FIXTURE_RANGE] });
+  assert.equal(r.calibration.method, 'ankle-loop');
+  assert.equal(r.calibration.mmPerPx, null);
+  assert.equal(r.saddle, null);
+  assert.ok(r.warnings.some((w) => w.includes('no millimetres')));
+  const want = truth(params);
+  close(r.summary.kneeFlexMin.median, 180 - want.kneeMaxExt, 1.5, 'knee most extended');
+  close(r.summary.kneeFlexMax.median, 180 - want.kneeMin, 1.5, 'knee most bent');
+  close(r.summary.kneeFlexBdc.median, 180 - want.kneeBdc, 3, 'knee at the bottom (phase from the ankle)');
+});

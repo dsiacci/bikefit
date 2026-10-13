@@ -64,8 +64,12 @@ function medianOf(arr) {
 
 /**
  * Decide, frame by frame, which label set (0 = left, 1 = right) holds the leg
- * nearest to the camera. Returns Int8Array: 0 or 1, or -1 when the frame has no
- * pose or the near leg jumped (a glitch).
+ * nearest to the camera. The model rarely swaps labels, but when it does the
+ * near leg jumps to where the far leg was. So: the near label is the one the
+ * model sees better and puts closer to the camera over the whole video; a frame
+ * switches to the other label only when the usual one jumped away from the
+ * previous near-leg position while the other one sits close to it. A frame where
+ * both are far is a glitch. Returns Int8Array: 0 or 1, or -1 (no pose, glitch).
  */
 export function nearLegLabels(track, { fps = 60 } = {}) {
   const n = track.t.length;
@@ -73,61 +77,82 @@ export function nearLegLabels(track, { fps = 60 } = {}) {
   const legJoints = ['knee', 'ankle', 'heel', 'toe'];
   const weights = { knee: 0.5, ankle: 1, heel: 1, toe: 1 };
 
-  // Body scale: the median thigh length of the better-seen side.
-  const vis = [0, 1].map((s) => medianOf(range(n).flatMap((f) => legJoints.map((j) => get(track, f, SIDES[s][j], 3)))));
-  const start = vis[1] > vis[0] ? 1 : 0;
-  const thigh = medianOf(range(n).map((f) => {
-    const s = SIDES[start];
-    return Math.hypot(get(track, f, s.hip, 0) - get(track, f, s.knee, 0), get(track, f, s.hip, 1) - get(track, f, s.knee, 1));
-  }));
-  const jump = (Number.isFinite(thigh) ? thigh : 200) * 0.25 * Math.max(1, 60 / fps);
-  const regap = Math.round(0.25 * fps);
-
-  // Follow one leg by continuity; a new segment starts after a long gap.
-  const segment = new Int32Array(n).fill(-1);
-  let prev = null, prevFrame = -Infinity, seg = -1;
+  // Which label is the near leg overall: higher visibility, smaller depth.
+  let vis = [0, 0], z = [0, 0], m = 0;
   for (let f = 0; f < n; f++) {
     if (!hasPose(track, f)) continue;
-    const pos = [0, 1].map((s) => legJoints.map((j) => [get(track, f, SIDES[s][j], 0), get(track, f, SIDES[s][j], 1)]));
-    let label;
-    if (!prev || f - prevFrame > regap) {
-      const v = [0, 1].map((s) => legJoints.reduce((acc, j) => acc + (get(track, f, SIDES[s][j], 3) || 0), 0));
-      label = v[1] > v[0] ? 1 : v[0] > v[1] ? 0 : start;
+    for (const s of [0, 1]) for (const j of legJoints) {
+      vis[s] += get(track, f, SIDES[s][j], 3) || 0;
+      z[s] += get(track, f, SIDES[s][j], 2) || 0;
+    }
+    m++;
+  }
+  if (!m) return out;
+  const votes = (vis[1] > vis[0] ? 1 : -1) + (z[1] < z[0] ? 1 : -1);
+  const usual = votes > 0 ? 1 : votes < 0 ? 0 : (vis[1] > vis[0] ? 1 : 0);
+
+  // Body scale: the median thigh length of the usual label. A foot moves a few
+  // pixels per frame; the other foot is a whole crank diameter away.
+  const thighs = [];
+  for (let f = 0; f < n; f++) {
+    if (!hasPose(track, f)) continue;
+    const s = SIDES[usual];
+    thighs.push(Math.hypot(get(track, f, s.hip, 0) - get(track, f, s.knee, 0), get(track, f, s.hip, 1) - get(track, f, s.knee, 1)));
+  }
+  const thigh = Number.isFinite(medianOf(thighs)) ? medianOf(thighs) : 200;
+  const perFrame = thigh * 0.12 * Math.max(1, 60 / fps);
+
+  const pos = (f, s) => legJoints.map((j) => [get(track, f, SIDES[s][j], 0), get(track, f, SIDES[s][j], 1)]);
+  const quality = (f, s) => legJoints.reduce((acc, j) => acc + (get(track, f, SIDES[s][j], 3) || 0), 0);
+  const depth = (f, s) => legJoints.reduce((acc, j) => acc + (get(track, f, SIDES[s][j], 2) || 0), 0);
+  const cost = (a, b) => {
+    let c = 0, w = 0;
+    legJoints.forEach((j, k) => {
+      const d = Math.hypot(a[k][0] - b[k][0], a[k][1] - b[k][1]);
+      if (Number.isFinite(d)) { c += weights[j] * d; w += weights[j]; }
+    });
+    return w ? c / w : Infinity;
+  };
+  const segment = new Int32Array(n).fill(-1);
+  let prev = null, prevFrame = -Infinity, seg = -1, suspicious = 0;
+  for (let f = 0; f < n; f++) {
+    if (!hasPose(track, f)) continue;
+    const a = pos(f, usual), b = pos(f, 1 - usual);
+    let label = usual;
+    const gap = f - prevFrame;
+    if (!prev || gap > Math.round(0.25 * fps)) {
       seg++;
     } else {
-      const cost = [0, 1].map((s) => {
-        let c = 0, w = 0;
-        legJoints.forEach((j, k) => {
-          const d = Math.hypot(pos[s][k][0] - prev[k][0], pos[s][k][1] - prev[k][1]);
-          if (Number.isFinite(d)) { c += weights[j] * d; w += weights[j]; }
-        });
-        return w ? c / w : Infinity;
-      });
-      label = cost[1] < cost[0] ? 1 : 0;
-      if (cost[label] > jump * Math.min(4, f - prevFrame)) continue; // glitch: leave -1, keep the old reference
+      const limit = perFrame * Math.min(gap, 6) + 0.05 * thigh;
+      const ca = cost(a, prev), cb = cost(b, prev);
+      if (ca <= limit) label = usual;
+      else if (cb <= limit && cb < ca) label = 1 - usual; // the labels swapped for this frame
+      else continue; // neither leg is where the near leg was: a glitch
     }
+    // Following a leg that the model sees worse and places further away, for
+    // several frames in a row, means we followed the wrong one: start again.
+    const worse = quality(f, label) < quality(f, 1 - label) && depth(f, label) > depth(f, 1 - label);
+    suspicious = worse ? suspicious + 1 : 0;
+    if (suspicious > 5) { prev = null; suspicious = 0; continue; }
     out[f] = label;
     segment[f] = seg;
-    prev = pos[label];
+    prev = label === usual ? a : b;
     prevFrame = f;
   }
 
-  // In each segment the near leg is the better-seen one, and the one MediaPipe
-  // puts closer to the camera (smaller z). If the followed leg loses on both
-  // counts, the whole segment followed the far leg: flip it.
-  const stats = Array.from({ length: seg + 1 }, () => ({ visNear: 0, visFar: 0, zNear: 0, zFar: 0 }));
+  // Each stretch must, on the whole, follow the better-seen, nearer leg.
+  const stats = new Map();
   for (let f = 0; f < n; f++) {
     if (out[f] < 0) continue;
-    const a = SIDES[out[f]], b = SIDES[1 - out[f]], st = stats[segment[f]];
-    for (const j of legJoints) {
-      st.visNear += get(track, f, a[j], 3) || 0; st.visFar += get(track, f, b[j], 3) || 0;
-      st.zNear += get(track, f, a[j], 2) || 0; st.zFar += get(track, f, b[j], 2) || 0;
-    }
+    const st = stats.get(segment[f]) ?? { better: 0, worse: 0 };
+    if (quality(f, out[f]) >= quality(f, 1 - out[f]) || depth(f, out[f]) <= depth(f, 1 - out[f])) st.better++;
+    else st.worse++;
+    stats.set(segment[f], st);
   }
   for (let f = 0; f < n; f++) {
     if (out[f] < 0) continue;
-    const st = stats[segment[f]];
-    if (st.visFar > st.visNear && st.zFar < st.zNear) out[f] = 1 - out[f];
+    const st = stats.get(segment[f]);
+    if (st.worse > st.better) out[f] = 1 - out[f];
   }
   return out;
 }

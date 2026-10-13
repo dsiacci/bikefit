@@ -90,17 +90,19 @@ export function drawLoopFrame(canvas, loop, i, { showArc = true } = {}) {
 
   ctx.fillStyle = c.ground;
   ctx.fillRect(0, 0, w, h);
-  // Crank circle and crank arm.
-  const [bx, by] = P([0, 0]);
-  ctx.strokeStyle = c.grid;
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(bx, by, s, 0, 2 * Math.PI); ctx.stroke();
-  const a = (fr.crankDeg * Math.PI) / 180;
-  const axle = P([Math.sin(a), -Math.cos(a)]);
-  ctx.strokeStyle = c.faint;
-  ctx.lineWidth = 4;
+  // Crank circle and crank arm, when the pedal axle was found.
   ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(...axle); ctx.stroke();
+  if (loop.method !== 'ankle-loop') {
+    const [bx, by] = P([0, 0]);
+    ctx.strokeStyle = c.grid;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(bx, by, s, 0, 2 * Math.PI); ctx.stroke();
+    const a = (fr.crankDeg * Math.PI) / 180;
+    const axle = P([Math.sin(a), -Math.cos(a)]);
+    ctx.strokeStyle = c.faint;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(...axle); ctx.stroke();
+  }
 
   const line = (...keys) => {
     const pts = keys.map((k) => fr[k]).filter(Boolean).map(P);

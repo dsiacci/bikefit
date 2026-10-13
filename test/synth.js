@@ -39,6 +39,7 @@ export const BASE = {
   lead: 0, // seconds standing still before pedalling
   tail: 0, // seconds standing still after
   phase0: 0, // crank angle at the start, degrees
+  slide: 0, // mm: the foot slides back and forth on the pedal (flat pedals), so no point of it turns in a circle
   seed: 1,
 };
 
@@ -54,7 +55,8 @@ export function pose(p, phiDeg) {
   const phi = rad(phiDeg);
   const axle = [p.crank * Math.sin(phi), p.crank * Math.cos(phi)];
   const psi = rad(p.footPitch + p.footSwing * Math.cos(phi - Math.PI / 2));
-  const place = (local) => { const [x, y] = rot(local, psi); return [axle[0] + x, axle[1] + y]; };
+  const slide = p.slide * Math.sin(2 * phi + 0.7);
+  const place = (local) => { const [x, y] = rot([local[0] + slide, local[1]], psi); return [axle[0] + x, axle[1] + y]; };
   const ankle = place(p.ankleLocal), heel = place(p.heelLocal), toe = place(p.toeLocal);
   const hip = [-p.hipFromBb * Math.cos(rad(p.seatAngle)), p.hipFromBb * Math.sin(rad(p.seatAngle))];
   const dx = ankle[0] - hip[0], dy = ankle[1] - hip[1], d = Math.hypot(dx, dy);

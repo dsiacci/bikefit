@@ -57,12 +57,12 @@ export function frameTimesFromMoov(v) {
     const pts = dts.slice();
     const ctts = child(v, stbl, 'ctts');
     if (ctts) {
-      const cv = v.getUint8(ctts.start);
       const m = readU32(v, ctts.start + 4);
       let s = 0;
       for (let i = 0; i < m; i++) {
         const count = readU32(v, ctts.start + 8 + i * 8);
-        const off = cv === 1 ? v.getInt32(ctts.start + 12 + i * 8) : readU32(v, ctts.start + 12 + i * 8);
+        // Read as signed in both versions: encoders write negative offsets in version 0 too.
+        const off = v.getInt32(ctts.start + 12 + i * 8);
         for (let k = 0; k < count && s < pts.length; k++, s++) pts[s] += off;
       }
     }

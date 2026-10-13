@@ -58,3 +58,9 @@ test('reads the moov box from a file, after the media data', async () => {
 test('a file without moov gives null', async () => {
   assert.equal(await frameTimes(new Blob([box('ftyp', Buffer.from('isom'))])), null);
 });
+
+test('negative composition offsets written in a version 0 box', () => {
+  // dts 0,20,40 ; offsets 0,-20 (as unsigned 2^32-20), +20 -> pts 0,0?,60: use 20,-20,0 -> 20,0,40
+  const times = frameTimesFromMoov(view(moov({ timescale: 600, deltas: [[3, 20]], ctts: [[1, 20], [1, 4294967276], [1, 0]] })));
+  assert.deepEqual(times.map((t) => Math.round(t * 600)), [0, 20, 40]);
+});

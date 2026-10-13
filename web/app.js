@@ -113,6 +113,8 @@ async function measure(file) {
       },
     });
     state.timings.extractMs = Math.round(performance.now() - started);
+    state.timings.perFrame = Object.fromEntries(Object.entries(raw.timing).map(([k, v]) => [k, Math.round(v / Math.max(1, raw.frames.length))]));
+    state.timings.exactFrameTimes = raw.exactTimes;
     $('progress-text').textContent = 'Measuring the strokes…';
     const track = trackFromResults(raw.width, raw.height, raw.frames);
     lastTrack = track;
@@ -202,7 +204,9 @@ function render(r) {
   const q = [
     `Video ${r.video.width}×${r.video.height}, ${fmt(r.video.fps, ' frames per second', 0)}, ${fmt(r.video.duration, ' s', 0)}; ${r.video.frames} frames read by the model (${state.model}, ${state.delegate === 'GPU' ? 'graphics card' : 'processor'}) in ${fmt(state.timings.extractMs / 1000, ' s', 0)}.`,
     `Steady pedalling from ${fmt(r.steady.start, ' s', 1)} to ${fmt(r.steady.end, ' s', 1)}: ${r.strokes.valid} clean strokes out of ${r.strokes.total}.`,
-    `Crank circle found from the feet; fit error ${fmt(100 * r.calibration.circleFit, ' %', 2)} of its radius.${r.calibration.mmPerPx ? ` Scale: ${fmt(r.calibration.mmPerPx, ' mm per pixel', 2)}.` : ''}`,
+    r.calibration.method === 'pedal-axle'
+      ? `Pedal axle and crank circle found from the feet; fit error ${fmt(100 * r.calibration.circleFit, ' %', 1)} of the radius.${r.calibration.mmPerPx ? ` Scale: ${fmt(r.calibration.mmPerPx, ' mm per pixel', 2)}.` : ''}`
+      : 'Strokes cut on the loop of the ankle: the pedal axle could not be located, so no millimetres.',
     `Rider facing ${r.side.facing}, near leg labelled ${r.side.nearLeg} by the model${r.side.labelSwitches ? `; left and right labels swapped ${r.side.labelSwitches} times and were corrected` : ''}.`,
   ];
   if (r.side.facing !== r.side.toesPoint) q.push('Warning: the toes and the pedalling direction disagree. Check that the video is not mirrored.');

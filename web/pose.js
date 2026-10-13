@@ -106,13 +106,20 @@ export async function extractPoses(file, landmarker, { video, maxSide = 1280, on
     const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
     const { plan, exact } = await visitPlan(file, duration);
     const frames = [];
+    const timing = { seekMs: 0, drawMs: 0, detectMs: 0 };
     let stamp = stampBase;
     for (const step of plan) {
       if (signal?.aborted) throw new DOMException('Stopped', 'AbortError');
+      let t0 = performance.now();
       await seekTo(v, step.seek);
+      let t1 = performance.now();
+      timing.seekMs += t1 - t0;
       ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      t0 = performance.now();
+      timing.drawMs += t0 - t1;
       stamp = Math.max(stamp + 1, stampBase + Math.round(step.t * 1000));
       const res = landmarker.detectForVideo(canvas, stamp);
+      timing.detectMs += performance.now() - t0;
       const landmarks = res.landmarks && res.landmarks[0]
         ? res.landmarks[0].map((p) => ({ x: p.x, y: p.y, z: p.z, visibility: p.visibility }))
         : null;
@@ -120,7 +127,7 @@ export async function extractPoses(file, landmarker, { video, maxSide = 1280, on
       onFrame?.({ index: frames.length - 1, t: step.t, duration, landmarks, video: v, total: plan.length });
     }
     stampBase = stamp + 1000;
-    return { width, height, duration, exactTimes: exact, frames };
+    return { width, height, duration, exactTimes: exact, frames, timing };
   } finally {
     v.removeAttribute('src');
     v.load();

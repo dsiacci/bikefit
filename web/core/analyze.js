@@ -5,7 +5,7 @@
 
 import { nearSeries } from './landmarks.js';
 import { despike, resample, fillGaps, lowpass, median, summarize, at } from './signal.js';
-import { findPedalAxle, axlePath, axisEllipse } from './calibration.js';
+import { findPedalAxle, axlePath, axisEllipse, robustCircle } from './calibration.js';
 import { steadyStretch, crankAngle, strokes } from './cycles.js';
 import {
   includedAngle, inclination, dist, saddleProjection, saddleChangeForKneeAngle, predictKneeChange,
@@ -21,6 +21,7 @@ export const DEFAULTS = {
   seatAngleDeg: 73, // seat post angle above horizontal, for the saddle projection
   crankMm: null, // crank length, gives the scale
   notchMm: null, // size of one saddle mark on the bike, if any
+  maxCircleError: 0.08, // above this residual (share of the radius), the pedal axle is not trusted
   ranges: null, // published ranges to compare with; null means the list in ranges.js
 };
 
@@ -149,11 +150,24 @@ export function analyze(track, settings = {}) {
     foot.heelX.push(v[0]); foot.heelY.push(v[1]); foot.toeX.push(v[2]); foot.toeY.push(v[3]); foot.ankleX.push(v[4]); foot.ankleY.push(v[5]);
   }
   if (foot.heelX.length < 3 * fs) throw new Error('The feet are not seen well enough to find the pedals. Check the lighting and that both shoes are in the frame.');
-  const axle = findPedalAxle(foot);
-  if (!axle) throw new Error('The pedals could not be located from the feet. Check that the near foot is visible all the way round.');
-  const path = axlePath({
-    heelX: grid.heel.x, heelY: grid.heel.y, toeX: grid.toe.x, toeY: grid.toe.y, ankleX: grid.ankle.x, ankleY: grid.ankle.y,
-  }, axle.s, axle.u, axle.footLength);
+  // The pedal axle is found when the shoe is fixed to the pedal (cleats). When
+  // no point of the foot draws a circle (flat pedals, a foot that slides, blur),
+  // the strokes are cut on the loop of the ankle instead and no millimetres are
+  // given: a scale read from that loop would be a guess.
+  let axle = findPedalAxle(foot);
+  let method = 'pedal-axle';
+  let path;
+  if (axle && axle.score <= opts.maxCircleError && axle.u > -0.3 && axle.u < 0.8 && axle.s > -0.1 && axle.s < 1.1) {
+    path = axlePath({
+      heelX: grid.heel.x, heelY: grid.heel.y, toeX: grid.toe.x, toeY: grid.toe.y, ankleX: grid.ankle.x, ankleY: grid.ankle.y,
+    }, axle.s, axle.u, axle.footLength);
+  } else {
+    const loop = robustCircle(foot.ankleX, foot.ankleY);
+    if (!loop) throw new Error('The pedal stroke could not be followed from the feet. Check that the near foot is visible all the way round.');
+    axle = { s: null, u: null, cx: loop.cx, cy: loop.cy, r: loop.r, score: loop.rms / loop.r, footLength: null };
+    path = { x: grid.ankle.x, y: grid.ankle.y };
+    method = 'ankle-loop';
+  }
   const { phi, facing } = crankAngle(path.x, path.y, axle.cx, axle.cy);
   const steadyAxle = { x: [], y: [] };
   for (let i = stretch.start; i < stretch.end; i++) {
@@ -171,7 +185,8 @@ export function analyze(track, settings = {}) {
     const ankle = segmentValues(ang.ankle, s.i0, s.i1);
     const upper = [segmentValues(ang.trunk, s.i0, s.i1), segmentValues(ang.shoulder, s.i0, s.i1), segmentValues(ang.elbow, s.i0, s.i1)];
     const radii = segmentValues(path.x, s.i0, s.i1).map((x, k) => Math.hypot(x - axle.cx, path.y[Math.ceil(s.i0) + k] - axle.cy) / axle.r);
-    const onCircle = radii.filter((r) => r > 0.8 && r < 1.2).length / Math.max(1, radii.length);
+    const band = method === 'pedal-axle' ? [0.8, 1.2] : [0.4, 1.8];
+    const onCircle = radii.filter((r) => r > band[0] && r < band[1]).length / Math.max(1, radii.length);
     const valid = s.regular && allFinite(knee) && allFinite(hip) && allFinite(ankle) && knee.length >= 12 && onCircle >= 0.9;
     const row = {
       t0: clean.t0 + s.i0 / fs, t1: clean.t0 + s.i1 / fs, cadence: s.cadence, valid,
@@ -204,7 +219,7 @@ export function analyze(track, settings = {}) {
   for (const key of [...METRICS.map((m) => m.key), ...INTERNAL]) summary[key] = summarize(valid.map((r) => r[key]));
 
   // Scale and leg geometry, from the medians over clean strokes.
-  const mmPerPx = opts.crankMm ? opts.crankMm / axle.r : null;
+  const mmPerPx = opts.crankMm && method === 'pedal-axle' ? opts.crankMm / axle.r : null;
   const T = median(valid.map((r) => r.thighPx));
   const S = median(valid.map((r) => r.shankPx));
   const tilt = median(valid.map((r) => r.hipAnkleTiltBdc));
@@ -242,23 +257,24 @@ export function analyze(track, settings = {}) {
       labelSwitches: clean.labelSwitches,
     },
     calibration: {
-      bottomBracket: [axle.cx, axle.cy], crankPx: axle.r, circleFit: axle.score, axleOffset: [axle.s, axle.u], mmPerPx,
+      method, bottomBracket: [axle.cx, axle.cy], crankPx: method === 'pedal-axle' ? axle.r : null, circleFit: axle.score, axleOffset: [axle.s, axle.u], mmPerPx,
       axisRatio: ellipse ? ellipse.ratio : null, cameraTurnDeg: ellipse ? ellipse.angleDeg : null,
     },
     warnings: [
-      ...(axle.score > 0.06 ? ['The crank circle was found only roughly: millimetres are approximate.'] : []),
-      ...(ellipse && ellipse.ratio < 0.94 ? [`The pedal path looks squeezed sideways: the camera may be turned about ${Math.round(ellipse.angleDeg)}° away from square, which distorts angles.`] : []),
+      ...(method === 'ankle-loop' ? ['The pedal axle could not be located from the feet (no point of the shoe turns in a clean circle: flat pedals, a sliding foot or motion blur), so the strokes were cut on the ankle and no millimetres are given.'] : []),
+      ...(method === 'pedal-axle' && axle.score > 0.04 ? ['The crank circle was found only roughly: millimetres are approximate.'] : []),
+      ...(method === 'pedal-axle' && ellipse && ellipse.ratio < 0.94 ? [`The pedal path looks squeezed sideways: the camera may be turned about ${Math.round(ellipse.angleDeg)}° away from square, which distorts angles.`] : []),
       ...(clean.fsNative < 45 ? [`The video has ${Math.round(clean.fsNative)} frames per second; 60 gives finer measures at the bottom of the stroke.`] : []),
     ],
     steady: { start: clean.t0 + stretch.start / fs, end: clean.t0 + stretch.end / fs },
     strokes: { total: all.length, valid: valid.length },
     summary,
     perStroke,
-    geometry: { thighToCrank: T / axle.r, shankToCrank: S / axle.r, hipAnkleTiltDeg: tilt, projection },
+    geometry: { thighToCrank: method === 'pedal-axle' ? T / axle.r : null, shankToCrank: method === 'pedal-axle' ? S / axle.r : null, hipAnkleTiltDeg: tilt, projection },
     comparisons,
     saddle,
     curves: phaseCurves(ang, phi, all, perStroke),
-    loop: representativeLoop(grid, phi, all, perStroke, axle, facing, ang, fs),
+    loop: { ...representativeLoop(grid, phi, all, perStroke, axle, facing, ang, fs), method },
   };
 }
 
