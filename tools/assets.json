@@ -1,0 +1,30 @@
+{
+  "tasksVision": {
+    "version": "0.10.35",
+    "note": "Pinned before 1.0.0: the npm builds from 1.0.0 on post usage metrics to odml.pa.googleapis.com every 60 s; 0.10.35 has no such code. The page's Content-Security-Policy would block that host anyway.",
+    "files": [
+      "vision_bundle.mjs",
+      "wasm/vision_wasm_internal.js",
+      "wasm/vision_wasm_internal.wasm",
+      "wasm/vision_wasm_nosimd_internal.js",
+      "wasm/vision_wasm_nosimd_internal.wasm"
+    ]
+  },
+  "models": {
+    "pose_landmarker_lite.task": {
+      "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+      "bytes": 5777746,
+      "sha256": "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a"
+    },
+    "pose_landmarker_full.task": {
+      "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+      "bytes": 9398198,
+      "sha256": "5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1"
+    },
+    "pose_landmarker_heavy.task": {
+      "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task",
+      "bytes": 30664242,
+      "sha256": "64437af838a65d18e5ba7a0d39b465540069bc8aae8308de3e318aad31fcbc7b"
+    }
+  }
+}

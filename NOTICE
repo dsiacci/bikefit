@@ -1,0 +1,15 @@
+bikefit
+Copyright 2026 Dominique Siacci
+
+This product includes MediaPipe Tasks Vision (npm package @mediapipe/tasks-vision,
+version 0.10.35) by The MediaPipe Authors, licensed under the Apache License,
+Version 2.0: https://github.com/google-ai-edge/mediapipe. Its files are copied
+into web/vendor/tasks-vision/ at build time, with a copy of the license.
+
+The page uses the MediaPipe Pose Landmarker models (BlazePose GHUM 3D, lite,
+full and heavy, float16 version 1) by Google, licensed under the Apache License,
+Version 2.0 according to their model card:
+https://storage.googleapis.com/mediapipe-assets/Model%20Card%20BlazePose%20GHUM%203D.pdf
+The models are downloaded at build time from
+https://storage.googleapis.com/mediapipe-models/ and checked against the
+SHA-256 values in tools/assets.json. They are not stored in this repository.

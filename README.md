@@ -90,7 +90,7 @@ Assumptions: the ankle keeps the same position at the bottom of the stroke when 
 
 ## Privacy
 
-- The page loads only its own files: no fonts, scripts, analytics or images from other sites. The Content-Security-Policy of the page forbids them.
+- The page loads only its own files: no fonts, scripts, analytics or images from other sites. The Content-Security-Policy of the page forbids them. The pose runtime is pinned to a version without usage metrics (see [Licenses](#licenses)).
 - Once the model is in memory, the page adds a second policy, `connect-src 'none'`: from then on the browser refuses every request the page could make (fetch, XHR, WebSocket, beacon), to any address including this site. The page checks that the lock holds and says so in the header.
 - The video is read through a local object URL and released at the end. Frames go into the model and are not drawn on screen unless you tick the option to see them.
 - The report and the numbers you download contain angles and the summary of the measurement, no picture.
@@ -115,7 +115,8 @@ The tests run the whole measurement on a synthetic rider (a planar leg on a cran
 The checks of [Does it measure anything?](#does-it-measure-anything) come from the page itself, run in headless Chromium:
 
 ```sh
-npx playwright install chromium
+npm install --no-save playwright@1.63.0
+npx playwright install --with-deps --only-shell chromium
 node tools/run-headless.mjs --video private/videos/V1.mov --out private/runs/V1 --crank 170 --keypoints
 node tools/experiment.mjs private/experiment.json --out docs/results.md
 ```
@@ -124,4 +125,7 @@ Videos, landmarks and measurements of real riders live in `private/`, which git 
 
 ## Licenses
 
-⟦code Apache 2.0; @mediapipe/tasks-vision version and license; Pose Landmarker model files and their license; Playwright (development only)⟧
+- **This code:** Apache License 2.0 ([LICENSE](LICENSE), [NOTICE](NOTICE)).
+- **MediaPipe Tasks Vision** 0.10.35 (`@mediapipe/tasks-vision` on npm), the WebAssembly runtime that runs the model: Apache License 2.0, source at [google-ai-edge/mediapipe](https://github.com/google-ai-edge/mediapipe). It is pinned before 1.0 on purpose: the npm builds from 1.0.0 on send usage metrics to `odml.pa.googleapis.com` every minute, as Google's [privacy notice](https://goo.gle/mediapipe-privacy) says; 0.10.35 has no such code. The page's Content-Security-Policy would block that host in any case.
+- **Pose Landmarker models** (BlazePose GHUM 3D, lite, full and heavy, float16 version 1): Apache License 2.0 according to their [model card](https://storage.googleapis.com/mediapipe-assets/Model%20Card%20BlazePose%20GHUM%203D.pdf). They are downloaded at build time and checked against the SHA-256 in [`tools/assets.json`](tools/assets.json), not stored here. References: Bazarevsky et al., *BlazePose: On-device Real-time Body Pose tracking*, CVPR Workshop on Computer Vision for Augmented and Virtual Reality, 2020 ([arXiv:2006.10204](https://arxiv.org/abs/2006.10204)); *GHUM & GHUML: Generative 3D Human Shape and Articulated Pose Models*, CVPR 2020, pp. 6184–6193.
+- **Playwright** 1.63.0 (Apache License 2.0) runs the experiments in headless Chromium. It is not part of the page.

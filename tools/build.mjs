@@ -22,6 +22,8 @@ if (installed !== assets.tasksVision.version) {
 const vendor = join(ROOT, 'web/vendor/tasks-vision');
 await mkdir(join(vendor, 'wasm'), { recursive: true });
 for (const file of assets.tasksVision.files) await cp(join(pkg, file), join(vendor, file), { recursive: true });
+// The npm package ships no license file; Apache 2.0 section 4(a) asks for a copy.
+await cp(join(ROOT, 'LICENSE'), join(vendor, 'LICENSE'));
 console.log(`tasks-vision ${installed}: ${assets.tasksVision.files.join(', ')}`);
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
