@@ -113,7 +113,8 @@ async function measure(file) {
       },
     });
     state.timings.extractMs = Math.round(performance.now() - started);
-    state.timings.perFrame = Object.fromEntries(Object.entries(raw.timing).map(([k, v]) => [k, Math.round(v / Math.max(1, raw.frames.length))]));
+    state.timings.decoder = raw.timing.decoder;
+    state.timings.perFrame = Object.fromEntries(Object.entries(raw.timing).filter(([, v]) => typeof v === 'number').map(([k, v]) => [k, Math.round(v / Math.max(1, raw.frames.length))]));
     state.timings.exactFrameTimes = raw.exactTimes;
     $('progress-text').textContent = 'Measuring the strokes…';
     const track = trackFromResults(raw.width, raw.height, raw.frames);
@@ -149,7 +150,7 @@ function render(r) {
   const kc = comps.kneeFlexBdc ?? null;
   $('knee-verdict').textContent = verdictSentence(kc);
   $('knee-verdict').dataset.v = kc ? kc.verdict : 'none';
-  $('saddle-text').textContent = saddleSentence(r.saddle, Boolean(r.settings.crankMm));
+  $('saddle-text').textContent = saddleSentence(r.saddle, Boolean(r.settings.crankMm), r.calibration.method);
 
   // Charts.
   const tip = $('tooltip');
@@ -216,10 +217,11 @@ function render(r) {
   // One stroke on a loop, at half speed.
   cancelAnimationFrame(loopTimer);
   const loop = r.loop;
-  if (loop && loop.frames.length) {
+  if (loop && loop.frames && loop.frames.length) {
     const start = performance.now();
     const tick = (now) => {
-      const i = Math.floor(((now - start) / 1000) * (loop.fps / 2)) % loop.frames.length;
+      // The first animation timestamp can precede `start`: never a negative index.
+      const i = Math.floor((Math.max(0, now - start) / 1000) * (loop.fps / 2)) % loop.frames.length;
       drawLoopFrame($('loop'), loop, i);
       loopTimer = requestAnimationFrame(tick);
     };

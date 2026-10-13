@@ -49,7 +49,7 @@ ${CHART_CSS}
 <p class="meta">${esc(date.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' }))} · video ${result.video.width}×${result.video.height}, ${fmt(result.video.fps, ' frames/s', 0)}, ${fmt(result.video.duration, ' s', 0)} · ${result.strokes.valid} clean pedal strokes of ${result.strokes.total} · crank ${result.settings.crankMm ? fmt(result.settings.crankMm, ' mm') : 'length not given'}</p>
 <p class="headline">Knee bend at the bottom of the stroke: <strong>${fmt(s.kneeFlexBdc.median, '°')}</strong> (middle half of strokes ${fmt(s.kneeFlexBdc.q1, '°')} to ${fmt(s.kneeFlexBdc.q3, '°')}; 0° is a straight leg)</p>
 <p>${esc(verdictSentence(kneeComp))}</p>
-<p>${esc(saddleSentence(result.saddle))}</p>
+<p>${esc(saddleSentence(result.saddle, Boolean(result.settings.crankMm), result.calibration.method))}</p>
 <h2>All measures</h2>
 <table><thead><tr><th>Measure</th><th>Median</th><th>Middle half</th><th>Published range</th><th>Source</th><th>Verdict</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="small">Only the two knee ranges come from peer-reviewed measurements taken while pedalling. The other figures are book or manufacturer guidelines, shown for context: no validated range exists for those angles.</p>

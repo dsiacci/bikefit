@@ -115,7 +115,7 @@ export function drawLoopFrame(canvas, loop, i, { showArc = true } = {}) {
   ctx.strokeStyle = c.bone;
   ctx.lineWidth = 5;
   ctx.lineJoin = 'round';
-  line('shoulder', 'hip');
+  line('ear', 'shoulder', 'hip');
   line('shoulder', 'elbow', 'wrist');
   line('hip', 'knee', 'ankle');
   line('ankle', 'heel', 'toe', 'ankle');

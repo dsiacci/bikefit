@@ -7,6 +7,7 @@
 //   node tools/run-headless.mjs --video private/videos/V1.mov --out private/runs/V1
 //     [--crank 170] [--notch 9] [--model full] [--delegate CPU] [--keypoints]
 //     [--record private/demo] [--show-frames] [--channel chrome]
+//     [--screenshot private/runs/V1/page.png] [--report]  (saves the report the page offers)
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -67,6 +68,14 @@ try {
     await page.waitForTimeout(2000);
   }
   if (opt.record) await page.waitForTimeout(4000); // let the results show on the recording
+  if (opt.screenshot) {
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: resolve(opt.screenshot), fullPage: true });
+  }
+  if (opt.report && (await page.isVisible('#dl-report'))) {
+    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#dl-report')]);
+    await download.saveAs(join(out, 'report.html'));
+  }
   const state = await page.evaluate(() => ({ ...window.bikefit.state }));
   await writeFile(join(out, 'run.json'), JSON.stringify({
     video: opt.video, finished: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000),

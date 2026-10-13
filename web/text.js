@@ -35,7 +35,8 @@ export function verdictSentence(c) {
   return `${where} the published range of ${span}, measured while pedalling (${c.source.short}).`;
 }
 
-export function saddleSentence(saddle, crankGiven = true) {
+export function saddleSentence(saddle, crankGiven = true, method = 'pedal-axle') {
+  if (method === 'ankle-loop') return 'No saddle change in millimetres for this video: the pedal axle could not be located, so there is no scale (see How the video was read).';
   if (!crankGiven) return 'Give your crank length to get the saddle change in millimetres.';
   if (!saddle) return 'No saddle change is computed without a published range to aim for.';
   const lo = Math.min(saddle.toLow, saddle.toHigh), hi = Math.max(saddle.toLow, saddle.toHigh);
