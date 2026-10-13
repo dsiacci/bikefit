@@ -6,7 +6,9 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "build": "node tools/build.mjs",
+    "serve": "node tools/serve.mjs 8080"
   },
   "engines": {
     "node": ">=20"

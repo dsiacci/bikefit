@@ -145,6 +145,7 @@ export function analyze(track, settings = {}) {
   }
   if (foot.heelX.length < 3 * fs) throw new Error('The feet are not seen well enough to find the pedals. Check the lighting and that both shoes are in the frame.');
   const axle = findPedalAxle(foot);
+  if (!axle) throw new Error('The pedals could not be located from the feet. Check that the near foot is visible all the way round.');
   const path = axlePath({
     heelX: grid.heel.x, heelY: grid.heel.y, toeX: grid.toe.x, toeY: grid.toe.y, ankleX: grid.ankle.x, ankleY: grid.ankle.y,
   }, axle.s, axle.u, axle.footLength);
