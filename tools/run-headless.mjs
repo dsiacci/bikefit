@@ -68,14 +68,7 @@ try {
     await page.waitForTimeout(2000);
   }
   if (opt.record) await page.waitForTimeout(4000); // let the results show on the recording
-  if (opt.screenshot) {
-    await page.waitForTimeout(1500);
-    await page.screenshot({ path: resolve(opt.screenshot), fullPage: true });
-  }
-  if (opt.report && (await page.isVisible('#dl-report'))) {
-    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#dl-report')]);
-    await download.saveAs(join(out, 'report.html'));
-  }
+  // The data first: a screenshot or a download that fails must not lose a run of several minutes.
   const state = await page.evaluate(() => ({ ...window.bikefit.state }));
   await writeFile(join(out, 'run.json'), JSON.stringify({
     video: opt.video, finished: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000),
@@ -85,6 +78,16 @@ try {
   if (opt.keypoints) {
     const track = await page.evaluate(() => window.bikefit.track());
     if (track) await writeFile(join(out, 'track.keypoints.json'), JSON.stringify(track));
+  }
+  if (opt.screenshot) {
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: resolve(opt.screenshot), fullPage: true }).catch((e) => console.error(`screenshot failed: ${e.message}`));
+  }
+  if (opt.report && state.phase === 'done' && (await page.isVisible('#dl-report'))) {
+    try {
+      const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30_000 }), page.click('#dl-report')]);
+      await download.saveAs(join(out, 'report.html'));
+    } catch (e) { console.error(`report download failed: ${e.message.split('\n')[0]}`); }
   }
   console.log(`${state.phase}${state.error ? `: ${state.error}` : ''} in ${Math.round((Date.now() - t0) / 1000)} s, network locked: ${state.locked}`);
 } finally {
