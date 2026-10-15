@@ -204,7 +204,10 @@ export function analyze(track, settings = {}) {
     const ankle = segmentValues(ang.ankle, s.i0, s.i1);
     const upper = [segmentValues(ang.trunk, s.i0, s.i1), segmentValues(ang.shoulder, s.i0, s.i1), segmentValues(ang.elbow, s.i0, s.i1)];
     const radii = segmentValues(path.x, s.i0, s.i1).map((x, k) => Math.hypot(x - axle.cx, path.y[Math.ceil(s.i0) + k] - axle.cy) / axle.r);
-    const band = method === 'pedal-axle' ? [0.8, 1.2] : [0.4, 1.8];
+    // A stroke counts when the pedal stays near the circle: within 20 % of the
+    // radius, or 2.5 times the scatter of the foot landmarks when they scatter more.
+    const width = Math.max(0.2, 2.5 * axle.score);
+    const band = method === 'pedal-axle' ? [1 - width, 1 + width] : [0.4, 1.8];
     const onCircle = radii.filter((r) => r > band[0] && r < band[1]).length / Math.max(1, radii.length);
     const valid = s.regular && allFinite(knee) && allFinite(hip) && allFinite(ankle) && knee.length >= 12 && onCircle >= 0.9;
     const row = {
