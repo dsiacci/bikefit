@@ -10,7 +10,8 @@ import { curveChart, strokeChart, attachHover, curveScales, strokeScales } from 
 import { buildReport } from './report.js';
 import { fmt, verdictSentence, verdictWord, saddleSentence } from './text.js';
 
-const APP_NAME = 'bikefit';
+const APP_NAME = 'Saddle Check';
+const FILE_PREFIX = 'saddle-check';
 const $ = (id) => document.getElementById(id);
 
 const state = { phase: 'loading', progress: 0, frames: 0, result: null, error: null, model: null, delegate: null, locked: false, timings: {} };
@@ -229,8 +230,8 @@ function render(r) {
     else loopTimer = requestAnimationFrame(tick);
   }
 
-  $('dl-report').onclick = () => save(`${APP_NAME}-report-${new Date().toISOString().slice(0, 10)}.html`, buildReport(r, { appName: APP_NAME, appUrl: location.origin + location.pathname }), 'text/html');
-  $('dl-json').onclick = () => save(`${APP_NAME}-numbers-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ ...r, loop: undefined }, null, 1), 'application/json');
+  $('dl-report').onclick = () => save(`${FILE_PREFIX}-report-${new Date().toISOString().slice(0, 10)}.html`, buildReport(r, { appName: APP_NAME, appUrl: location.origin + location.pathname }), 'text/html');
+  $('dl-json').onclick = () => save(`${FILE_PREFIX}-numbers-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ ...r, loop: undefined }, null, 1), 'application/json');
   $('results').hidden = false;
   $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }

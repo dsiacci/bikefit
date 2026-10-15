@@ -1,4 +1,4 @@
-# bikefit
+# Saddle Check
 
 Bike fit angles from a side-view phone video, measured in the browser. You drop a video of yourself pedalling; an open-weight pose model ([MediaPipe Pose Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)) runs inside the page and finds your joints in every frame; the page measures your knee, hip, ankle, trunk, shoulder and elbow angles at every pedal stroke, compares the medians with published ranges, and turns the knee angle into a saddle change in millimetres.
 
