@@ -8,6 +8,7 @@
 //     [--crank 170] [--notch 9] [--model full] [--delegate CPU] [--keypoints]
 //     [--record private/demo] [--show-frames] [--channel chrome]
 //     [--screenshot private/runs/V1/page.png] [--report]  (saves the report the page offers)
+//   node tools/run-headless.mjs --sample --out private/demo [--record private/demo]  (the synthetic rider, no video)
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -28,7 +29,7 @@ function args(argv) {
 }
 
 const opt = args(process.argv);
-if (!opt.video || !opt.out) {
+if ((!opt.video && !opt.sample) || !opt.out) {
   console.error('Usage: node tools/run-headless.mjs --video <file> --out <folder> [--crank 170] [--notch 9] [--model full] [--keypoints]');
   process.exit(2);
 }
@@ -57,8 +58,11 @@ try {
   if (opt.crank !== undefined) await page.selectOption('#crank', String(opt.crank));
   if (opt.notch) await page.fill('#notch', String(opt.notch));
   if (opt['show-frames']) await page.check('#show-frames');
-  await page.setInputFiles('#file', resolve(opt.video));
-  await page.click('#run');
+  if (opt.sample) await page.click('#sample');
+  else {
+    await page.setInputFiles('#file', resolve(opt.video));
+    await page.click('#run');
+  }
   let last = -1;
   for (;;) {
     const s = await page.evaluate(() => ({ phase: window.bikefit.state.phase, progress: window.bikefit.state.progress, frames: window.bikefit.state.frames }));

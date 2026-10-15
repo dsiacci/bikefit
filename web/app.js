@@ -9,6 +9,7 @@ import { drawPreview, drawLoopFrame } from './skeleton.js';
 import { curveChart, strokeChart, attachHover, curveScales, strokeScales } from './charts.js';
 import { buildReport } from './report.js';
 import { fmt, verdictSentence, verdictWord, saddleSentence } from './text.js';
+import { makeTrack } from './core/synth.js';
 
 const APP_NAME = 'Saddle Check';
 const FILE_PREFIX = 'saddle-check';
@@ -81,6 +82,7 @@ $('model').addEventListener('change', (e) => {
   location.assign(url.href);
 });
 $('run').addEventListener('click', () => measure(selected));
+$('sample').addEventListener('click', () => sample());
 $('stop').addEventListener('click', () => controller?.abort());
 $('again').addEventListener('click', () => { show('idle'); $('file').click(); });
 
@@ -143,8 +145,23 @@ async function measure(file) {
   }
 }
 
+// An example for visitors without a video: the synthetic rider of the tests,
+// measured by the same code. It needs neither the model nor the network.
+function sample() {
+  if (state.phase === 'measuring') return;
+  const { track, params } = makeTrack({ seconds: 45, noise: 1.5, swapRate: 0.01, dropRate: 0.01, lead: 3, tail: 2, seed: 7 });
+  const result = analyze(track, { crankMm: params.crank, notchMm: Number($('notch').value) || null });
+  result.sample = true;
+  result.settings.model = null;
+  state.result = result;
+  state.phase = 'done';
+  render(result);
+}
+
 function render(r) {
   const s = r.summary;
+  $('results-title').textContent = r.sample ? 'Example: a synthetic rider' : 'Your results';
+  $('sample-note').hidden = !r.sample;
   const comps = Object.fromEntries(r.comparisons.map((c) => [c.metric, c]));
   $('knee-big').textContent = fmt(s.kneeFlexBdc.median, '°');
   $('knee-spread').textContent = `Middle half of your strokes: ${fmt(s.kneeFlexBdc.q1, '°')} to ${fmt(s.kneeFlexBdc.q3, '°')}, over ${s.kneeFlexBdc.n} clean strokes. 0° would be a straight leg.`;
@@ -204,7 +221,9 @@ function render(r) {
 
   // How the video was read.
   const q = [
-    `Video ${r.video.width}×${r.video.height}, ${fmt(r.video.fps, ' frames per second', 0)}, ${fmt(r.video.duration, ' s', 0)}; ${r.video.frames} frames read by the model (${state.model}, ${state.delegate === 'GPU' ? 'graphics card' : 'processor'}) in ${fmt(state.timings.extractMs / 1000, ' s', 0)}.`,
+    r.sample
+      ? `Synthetic rider: ${fmt(r.video.duration, ' s', 0)} at ${fmt(r.video.fps, ' frames per second', 0)}, landmarks computed by the page itself, no video and no pose model.`
+      : `Video ${r.video.width}×${r.video.height}, ${fmt(r.video.fps, ' frames per second', 0)}, ${fmt(r.video.duration, ' s', 0)}; ${r.video.frames} frames read by the model (${state.model}, ${state.delegate === 'GPU' ? 'graphics card' : 'processor'}) in ${fmt(state.timings.extractMs / 1000, ' s', 0)}.`,
     `Steady pedalling from ${fmt(r.steady.start, ' s', 1)} to ${fmt(r.steady.end, ' s', 1)}: ${r.strokes.valid} clean strokes out of ${r.strokes.total}.`,
     r.calibration.method === 'pedal-axle'
       ? `Pedal axle and crank circle found from the feet; fit error ${fmt(100 * r.calibration.circleFit, ' %', 1)} of the radius.${r.calibration.mmPerPx ? ` Scale: ${fmt(r.calibration.mmPerPx, ' mm per pixel', 2)}.` : ''}`

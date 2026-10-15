@@ -149,3 +149,5 @@ td.v-guide { color: var(--muted); }
 .c-cross { stroke: var(--chart-secondary); stroke-width: 1; }
 .c-dot { fill: var(--series-1); stroke: var(--chart-surface); stroke-width: 2; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+#sample { margin: 18px 0 0 10px; }

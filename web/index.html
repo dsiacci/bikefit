@@ -64,6 +64,7 @@
         <label class="check"><input type="checkbox" id="show-frames"> Show the video picture behind the skeleton while measuring</label>
       </details>
       <button type="button" class="primary" id="run" disabled>Measure</button>
+      <button type="button" class="secondary" id="sample">No video at hand? See a synthetic rider</button>
       <details class="howto" open>
         <summary>How to film</summary>
         <ol>
@@ -104,6 +105,7 @@
 
   <section id="results" hidden aria-labelledby="results-title">
     <h2 id="results-title">Your results</h2>
+    <p class="hint" id="sample-note" hidden>An example computed by the page from a synthetic rider: a leg on a 170 mm crank, with landmark noise, left and right labels swapped now and then, and dropped frames, like a real video. No video and no pose model were involved, and the proportions are made up.</p>
     <div class="result-top">
       <div class="headline">
         <p class="kicker">Knee bend at the bottom of the stroke</p>
