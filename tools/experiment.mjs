@@ -59,10 +59,13 @@ const out = { generated: new Date().toISOString(), runs: {}, repeatability: {}, 
 
 // 0. One code: the page's numbers and a re-run of the same module on the saved landmarks.
 lines.push('## Same code, same numbers', '');
+// The landmarks are saved rounded to 0.01 px (and visibility to 0.01), so a re-run
+// can differ from the page in the last decimals: report the largest gap.
 for (const [name, { result, rerun }] of Object.entries(runs)) {
-  const same = rerun ? KEYS.every((k) => Math.abs(rerun.summary[k].median - result.summary[k].median) < 1e-9) : null;
-  out.runs[name] = { strokes: result.strokes, video: result.video, summary: Object.fromEntries(KEYS.map((k) => [k, result.summary[k]])), rerunIdentical: same };
-  lines.push(`- ${name}: ${result.strokes.valid} clean strokes of ${result.strokes.total}, ${f1(result.video.fps)} frames/s; page result and Node re-run on the saved landmarks ${same === null ? 'not compared (no landmarks saved)' : same ? 'identical' : 'DIFFERENT'}.`);
+  const gap = rerun ? Math.max(...KEYS.map((k) => Math.abs(rerun.summary[k].median - result.summary[k].median))) : null;
+  const same = gap === null ? null : gap < 0.05 && rerun.strokes.valid === result.strokes.valid;
+  out.runs[name] = { strokes: result.strokes, video: result.video, summary: Object.fromEntries(KEYS.map((k) => [k, result.summary[k]])), rerunLargestGap: gap, rerunSame: same };
+  lines.push(`- ${name}: ${result.strokes.valid} clean strokes of ${result.strokes.total}, ${f1(result.video.fps)} frames/s; page result and Node re-run on the saved landmarks ${same === null ? 'not compared (no landmarks saved)' : same ? `the same, to ${gap.toFixed(3)}° at most` : `DIFFERENT (largest gap ${gap.toFixed(3)}°)`}.`);
 }
 
 // 1. Repeatability: the baseline videos, same saddle.

@@ -40,7 +40,7 @@ test('experiment script: repeatability, sensitivity against prediction, referenc
     writeFileSync(cfgPath, JSON.stringify(cfg));
     execFileSync(process.execPath, ['tools/experiment.mjs', cfgPath], { stdio: 'pipe' });
     const out = JSON.parse(readFileSync(cfgPath.replace(/\.json$/, '.results.json'), 'utf8'));
-    for (const n of ['V1', 'V2', 'V3', 'V4']) assert.equal(out.runs[n].rerunIdentical, true, `${n} re-run identical`);
+    for (const n of ['V1', 'V2', 'V3', 'V4']) assert.equal(out.runs[n].rerunSame, true, `${n} re-run gives the same numbers`);
     assert.ok(out.repeatability.kneeFlexBdc.spread < 0.6, `spread ${out.repeatability.kneeFlexBdc.spread}`);
     close(out.sensitivity.V3.knee.diff, out.sensitivity.V3.predicted, 0.5, 'knee change vs prediction');
     close(out.sensitivity.V3.hipMovedMm, 9, 1.5, 'hip moved in the picture');

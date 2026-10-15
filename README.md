@@ -42,7 +42,7 @@ Landmarks with visibility below 0.5 are dropped, isolated spikes removed, gaps u
 
 ### 4. The crank, found from the feet
 
-The pedal axle is the only point of the foot that moves on a perfect circle around the bottom bracket, and the radius of that circle is the crank length. So the page searches, in the frame of the foot (heel and toe landmarks), for the point whose path is the most circular. Its circle gives the bottom bracket, the crank angle at every frame, and the scale: crank length in millimetres over radius in pixels. On real videos the model squashes that path a little sideways (by 8 to 14 % on our test videos, the same in every video of the same session), so the circle is accepted up to a residual of 15 % of the radius, with a warning that the millimetres are approximate; above that (a shoe sliding on a flat pedal gave 21 %), the page gives no millimetres. The camera angle is checked with the thigh instead: it keeps its length whatever its angle, and a camera turned away from square shortens it more when it is near horizontal than when it is steep. The page warns above a turn of about 20°.
+The pedal axle is the only point of the foot that moves on a perfect circle around the bottom bracket, and the radius of that circle is the crank length. So the page searches, in the frame of the foot (heel and toe landmarks), for the point whose path is the most circular. Its circle gives the bottom bracket, the crank angle at every frame, and the scale: crank length in millimetres over radius in pixels. On real videos the foot landmarks scatter around that circle by about a tenth of its radius, so the page judges the path in two steps: fitted on every frame, it must stay within 15 % of the radius; averaged per crank angle (36 bins of 10°, over dozens of strokes), it must fit a circle within 12 %. Averaging removes random scatter but keeps the shape of a path that really is not a circle: a synthetic foot sliding 70 mm on the pedal gives 14 % and is refused, our real videos with cleats gave 6 to 11 %. The radius and the bottom bracket come from the averaged loop; on synthetic riders its radius stays within 4 % of the truth even with that sliding foot. When the scatter is large, the page warns that the millimetres are approximate, to within about 10 %. When the path fails either test (a sneaker sliding on a spin bike gave 21 % on every frame), the strokes are cut on the loop of the ankle and no millimetres are given. The camera angle is checked with the thigh instead: it keeps its length whatever its angle, and a camera turned away from square shortens it more when it is near horizontal than when it is steep. The page warns above a turn of about 20°.
 
 ### 5. Pedal strokes
 
@@ -86,7 +86,24 @@ Assumptions: the ankle keeps the same position at the bottom of the stroke when 
 
 ## Does it measure anything?
 
-⟦the three checks: sensitivity (saddle raised by one mark on a Zwift Ride), repeatability (same position filmed again), reference (still pose against an inclinometer); all numbers, misses included⟧
+One rider (the author), a Zwift Ride V1 home trainer with its 170 mm cranks and cleat pedals, an iPhone 13 Pro Max on a tripod two to three metres away on the drive side, 1080p at 60 frames per second, tripod and bike taped to the floor, a window behind the bike. Five videos: V1, V2 (after getting off and back on) and V4 (saddle set back to its starting letter) at the same height; V3 one saddle letter higher, 10 mm measured with a tape; S, a still pose with the crank down, checked with an inclinometer (the level of the iPhone Measure app held along the thigh, then the shank, read by the rider alone on the bike). Every number comes from the page itself in headless Chromium (`tools/run-headless.mjs`, measuring code of commit d2e0a21) and from `tools/experiment.mjs` on what it saved. The full output is in [docs/results.md](docs/results.md). One rider and one bike: this checks the page, not the published ranges.
+
+| Video | Saddle | Knee bend at the bottom (median, 95 % interval) | Clean strokes |
+|---|---|---|---|
+| V1 | start | 42.3° (41.8 to 42.5) | 114 of 133 |
+| V2 | start | 43.0° (42.6 to 43.5) | 76 of 92 |
+| V4 | start | 42.8° (42.2 to 43.1) | 96 of 115 |
+| V3 | +10 mm | 37.9° (37.3 to 38.2) | 122 of 134 |
+
+**Repeatability.** 0.7° between the lowest and the highest of the three videos at the same saddle height. The other angles moved more between takes, because the rider did: trunk 39.5 to 43.5°, cadence 76 to 99 rpm.
+
+**Sensitivity.** One saddle letter higher, the knee bend at the bottom drops by 4.8° (95 % interval 4.3 to 5.4). The leg triangle predicted 3.4°. The ankle angle at the bottom did not change clearly (−0.9°, interval −2.1 to +0.6), and the hip moved 12.4 mm in the picture for a 10 mm saddle change: the rider may have sat a little differently, or the scale is a few percent off; these videos cannot tell.
+
+**The suggestion.** On the three starting videos, the page suggested raising the saddle by about 11 mm (1.1 letters) to reach 38°, the middle of the range. V3, one letter higher, measured 37.9°.
+
+**Reference.** Still, crank down: a knee bend of 33.2° from the model, 34.0° from the inclinometer. Taken one by one, the thigh and the shank differ by 11.3° and 12.1°, turned the same way, which cancels out in the knee angle: one of the two references was tilted by about 12°, the inclinometer readings or the camera's horizon. Pedalling bends the knee 9.4° more than the still pose, close to the 8° of [Millour et al. 2019](https://doi.org/10.37190/ABB-01428-2019-02).
+
+**Misses.** On the first runs, the pedal axle threshold, set on synthetic riders (residual under 2 %), refused these real videos (11 to 14 % against 8 %), and the page fell back on the ankle loop, which placed the bottom of the stroke badly: knee at 39° instead of 42°. The crank circle now comes from the pedal path averaged per crank angle ([section 4](#4-the-crank-found-from-the-feet)). The crank radius found still varies by 5 % between the four pedalling videos (112.9 to 118.5 px), hence millimetres given to within 10 %; the angles do not depend on the scale.
 
 ## Privacy
 
