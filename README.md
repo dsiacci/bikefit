@@ -42,7 +42,7 @@ Landmarks with visibility below 0.5 are dropped, isolated spikes removed, gaps u
 
 ### 4. The crank, found from the feet
 
-The pedal axle is the only point of the foot that moves on a perfect circle around the bottom bracket, and the radius of that circle is the crank length. So the page searches, in the frame of the foot (heel and toe landmarks), for the point whose path is the most circular. Its circle gives the bottom bracket, the crank angle at every frame, and the scale: crank length in millimetres over radius in pixels. The same circle checks the camera: seen from an angle, it turns into an ellipse, and the page warns when it is squeezed by more than 6 % (about 20°).
+The pedal axle is the only point of the foot that moves on a perfect circle around the bottom bracket, and the radius of that circle is the crank length. So the page searches, in the frame of the foot (heel and toe landmarks), for the point whose path is the most circular. Its circle gives the bottom bracket, the crank angle at every frame, and the scale: crank length in millimetres over radius in pixels. On real videos the model squashes that path a little sideways (by 8 to 14 % on our test videos, the same in every video of the same session), so the circle is accepted up to a residual of 15 % of the radius, with a warning that the millimetres are approximate; above that (a shoe sliding on a flat pedal gave 21 %), the page gives no millimetres. The camera angle is checked with the thigh instead: it keeps its length whatever its angle, and a camera turned away from square shortens it more when it is near horizontal than when it is steep. The page warns above a turn of about 20°.
 
 ### 5. Pedal strokes
 

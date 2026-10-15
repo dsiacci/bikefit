@@ -209,6 +209,7 @@ function render(r) {
     r.calibration.method === 'pedal-axle'
       ? `Pedal axle and crank circle found from the feet; fit error ${fmt(100 * r.calibration.circleFit, ' %', 1)} of the radius.${r.calibration.mmPerPx ? ` Scale: ${fmt(r.calibration.mmPerPx, ' mm per pixel', 2)}.` : ''}`
       : 'Strokes cut on the loop of the ankle: the pedal axle could not be located, so no millimetres.',
+    ...(r.calibration.thighLengthRatio ? [`Camera angle: the thigh is ${fmt(100 * r.calibration.thighLengthRatio, ' %', 0)} as long near horizontal as when steep (100 % when the camera is square to the bike; estimated turn ${fmt(r.calibration.cameraTurnDeg, '°', 0)}).`] : []),
     `Rider facing ${r.side.facing}, near leg labelled ${r.side.nearLeg} by the model${r.side.labelSwitches ? `; left and right labels swapped ${r.side.labelSwitches} times and were corrected` : ''}.`,
   ];
   if (r.side.facing !== r.side.toesPoint) q.push('Warning: the toes and the pedalling direction disagree. Check that the video is not mirrored.');

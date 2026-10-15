@@ -40,6 +40,7 @@ export const BASE = {
   tail: 0, // seconds standing still after
   phase0: 0, // crank angle at the start, degrees
   slide: 0, // mm: the foot slides back and forth on the pedal (flat pedals), so no point of it turns in a circle
+  yaw: 0, // degrees: camera turned away from square to the bike, horizontal distances shrink by cos(yaw)
   seed: 1,
 };
 
@@ -129,7 +130,7 @@ export function makeTrack(overrides = {}) {
   const near = p.facing > 0 ? SIDES[1] : SIDES[0];
   const far = p.facing > 0 ? SIDES[0] : SIDES[1];
   const toPx = ([x, y], shrink = 1) => [
-    p.bb[0] + p.facing * x * p.scale * shrink,
+    p.bb[0] + p.facing * x * p.scale * shrink * Math.cos((p.yaw * Math.PI) / 180),
     p.bb[1] - y * p.scale * shrink,
   ];
   let swapLeft = 0;

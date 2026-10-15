@@ -59,3 +59,22 @@ test('a camera turned 20 degrees squeezes the pedal circle into an ellipse', asy
   close(e.angleDeg, 20, 0.2, 'camera angle');
   close(axisEllipse(xs.map((x) => 500 + (x - 500) / Math.cos((20 * Math.PI) / 180)), ys).angleDeg, 0, 0.5, 'square camera');
 });
+
+test('averaging the pedal path per crank angle removes random scatter, not a sliding foot', async () => {
+  const { phaseLoop } = await import('../web/core/calibration.js');
+  const rand = rng(3);
+  const gauss = () => Math.sqrt(-2 * Math.log(rand() || 1e-12)) * Math.cos(2 * Math.PI * rand());
+  const xs = [], ys = [], sx = [], sy = [];
+  for (let i = 0; i < 6000; i++) {
+    const a = (i / 60) * 2 * Math.PI * 1.43; // 86 rpm at 60 frames per second (frames do not repeat the same angles)
+    xs.push(500 + 100 * Math.cos(a) + 12 * gauss()); ys.push(400 + 100 * Math.sin(a) + 12 * gauss());
+    const slide = 40 * Math.sin(2 * a + 0.7); // along the foot, roughly horizontal
+    sx.push(500 + 100 * Math.cos(a) + slide + gauss()); sy.push(400 + 100 * Math.sin(a) + gauss());
+  }
+  const noisy = phaseLoop(xs, ys, 500, 400);
+  close(noisy.r, 100, 1, 'radius through the scatter');
+  assert.ok(noisy.score < 0.02, `scatter averages out: ${noisy.score}`);
+  const sliding = phaseLoop(sx, sy, 500, 400);
+  assert.ok(sliding.score > 0.12, `a sliding foot keeps its shape: ${sliding.score}`);
+  assert.equal(phaseLoop(xs.slice(0, 20), ys.slice(0, 20), 500, 400), null, 'not seen all the way round');
+});

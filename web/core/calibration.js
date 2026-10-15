@@ -160,6 +160,29 @@ export function findPedalAxle(foot, { maxPoints = 1500 } = {}) {
   return { ...best, footLength: L };
 }
 
+/**
+ * The pedal path averaged per crank angle: samples binned by their angle around
+ * (cx, cy) in 36 bins of 10°, the mean of each bin, and the circle through the
+ * means. Random landmark scatter averages out; a path that is really not a
+ * circle (a foot sliding on the pedal) keeps its shape. Returns the circle and
+ * its residual as a share of the radius, or null when fewer than 34 bins have
+ * at least 5 samples (the pedal was not seen all the way round).
+ */
+export function phaseLoop(xs, ys, cx, cy, { bins = 36, minPerBin = 5 } = {}) {
+  const sx = new Float64Array(bins), sy = new Float64Array(bins), n = new Float64Array(bins);
+  for (let i = 0; i < xs.length; i++) {
+    if (!Number.isFinite(xs[i]) || !Number.isFinite(ys[i])) continue;
+    const a = (Math.atan2(ys[i] - cy, xs[i] - cx) + 2 * Math.PI) % (2 * Math.PI);
+    const b = Math.min(bins - 1, Math.floor((a / (2 * Math.PI)) * bins));
+    sx[b] += xs[i]; sy[b] += ys[i]; n[b]++;
+  }
+  const mx = [], my = [];
+  for (let b = 0; b < bins; b++) if (n[b] >= minPerBin) { mx.push(sx[b] / n[b]); my.push(sy[b] / n[b]); }
+  if (mx.length < bins - 2) return null;
+  const c = fitCircle(Float64Array.from(mx), Float64Array.from(my));
+  return c && c.r > 0 ? { cx: c.cx, cy: c.cy, r: c.r, score: c.rms / c.r, bins: mx.length } : null;
+}
+
 /** Pedal axle positions for every sample, given the offsets found by findPedalAxle. */
 export function axlePath(foot, s, u, footLength) {
   const n = foot.heelX.length;
@@ -208,7 +231,17 @@ export function axisEllipse(xs, ys) {
   const G = 1 + (D * D) / (4 * A) + (E * E) / (4 * C);
   const rx = Math.sqrt(G / A), ry = Math.sqrt(G / C);
   const ratio = rx / ry;
-  return { rx, ry, ratio, angleDeg: ratio < 1 ? (Math.acos(ratio) * 180) / Math.PI : 0 };
+  const cx = mx - D / (2 * A), cy = my - E / (2 * C);
+  // Residual: distance of each point to the ellipse along its ray from the
+  // centre, as a share of the mean radius.
+  let ss = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - cx, dy = ys[i] - cy;
+    const rho = Math.hypot(dx / rx, dy / ry);
+    if (rho > 0) ss += (Math.hypot(dx, dy) * (1 - 1 / rho)) ** 2;
+  }
+  const score = Math.sqrt(ss / n) / ((rx + ry) / 2);
+  return { cx, cy, rx, ry, ratio, angleDeg: ratio < 1 ? (Math.acos(ratio) * 180) / Math.PI : 0, score };
 }
 
 function solve(A, b) {

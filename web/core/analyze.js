@@ -5,7 +5,7 @@
 
 import { nearSeries } from './landmarks.js';
 import { despike, resample, fillGaps, lowpass, median, summarize, at } from './signal.js';
-import { findPedalAxle, axlePath, axisEllipse, robustCircle } from './calibration.js';
+import { findPedalAxle, axlePath, axisEllipse, robustCircle, phaseLoop } from './calibration.js';
 import { steadyStretch, crankAngle, strokes } from './cycles.js';
 import {
   includedAngle, inclination, dist, saddleProjection, saddleChangeForKneeAngle, predictKneeChange,
@@ -21,7 +21,15 @@ export const DEFAULTS = {
   seatAngleDeg: 73, // seat post angle above horizontal, for the saddle projection
   crankMm: null, // crank length, gives the scale
   notchMm: null, // size of one saddle mark on the bike, if any
-  maxCircleError: 0.08, // above this residual (share of the radius), the pedal axle is not trusted
+  // The pedal axle is trusted when its path fits a circle within this residual
+  // (share of the radius)... Real videos of a rider with cleats gave 0.11 to
+  // 0.14: the model scatters the foot landmarks by about a tenth of the crank.
+  // A sneaker sliding on a spin bike pedal gave 0.21.
+  maxCircleError: 0.15,
+  // ...and the same path averaged per crank angle (scatter removed) fits a
+  // circle within this one. Real videos with cleats: 0.06 to 0.10; a synthetic
+  // foot sliding 70 mm on the pedal: 0.14; clean synthetic riders: under 0.02.
+  maxLoopError: 0.12,
   ranges: null, // published ranges to compare with; null means the list in ranges.js
 };
 
@@ -157,14 +165,24 @@ export function analyze(track, settings = {}) {
   let axle = findPedalAxle(foot);
   let method = 'pedal-axle';
   let path;
+  // The circle of the averaged loop gives the bottom bracket and the crank in
+  // pixels: on synthetic riders its radius stays within 4 % of the truth even
+  // with a foot sliding 70 mm, where a fit on every frame is 9 % off.
+  let loop = null;
   if (axle && axle.score <= opts.maxCircleError && axle.u > -0.3 && axle.u < 0.8 && axle.s > -0.1 && axle.s < 1.1) {
+    const steadyPath = axlePath(foot, axle.s, axle.u, axle.footLength);
+    loop = phaseLoop(steadyPath.x, steadyPath.y, axle.cx, axle.cy);
+    if (loop && loop.score > opts.maxLoopError) loop = null;
+  }
+  if (loop) {
+    axle = { ...axle, cx: loop.cx, cy: loop.cy, r: loop.r, loopScore: loop.score };
     path = axlePath({
       heelX: grid.heel.x, heelY: grid.heel.y, toeX: grid.toe.x, toeY: grid.toe.y, ankleX: grid.ankle.x, ankleY: grid.ankle.y,
     }, axle.s, axle.u, axle.footLength);
   } else {
-    const loop = robustCircle(foot.ankleX, foot.ankleY);
-    if (!loop) throw new Error('The pedal stroke could not be followed from the feet. Check that the near foot is visible all the way round.');
-    axle = { s: null, u: null, cx: loop.cx, cy: loop.cy, r: loop.r, score: loop.rms / loop.r, footLength: null };
+    const ankle = robustCircle(foot.ankleX, foot.ankleY);
+    if (!ankle) throw new Error('The pedal stroke could not be followed from the feet. Check that the near foot is visible all the way round.');
+    axle = { s: null, u: null, cx: ankle.cx, cy: ankle.cy, r: ankle.r, score: ankle.rms / ankle.r, footLength: null };
     path = { x: grid.ankle.x, y: grid.ankle.y };
     method = 'ankle-loop';
   }
@@ -174,6 +192,7 @@ export function analyze(track, settings = {}) {
     if (Number.isFinite(path.x[i]) && Number.isFinite(path.y[i])) { steadyAxle.x.push(path.x[i]); steadyAxle.y.push(path.y[i]); }
   }
   const ellipse = axisEllipse(steadyAxle.x, steadyAxle.y);
+  const turn = cameraTurn(grid, stretch.start, stretch.end);
   const all = strokes(phi, fs, stretch.start, stretch.end);
   const ang = angleSeries(grid, count, facing);
 
@@ -257,13 +276,13 @@ export function analyze(track, settings = {}) {
       labelSwitches: clean.labelSwitches,
     },
     calibration: {
-      method, bottomBracket: [axle.cx, axle.cy], crankPx: method === 'pedal-axle' ? axle.r : null, circleFit: axle.score, axleOffset: [axle.s, axle.u], mmPerPx,
-      axisRatio: ellipse ? ellipse.ratio : null, cameraTurnDeg: ellipse ? ellipse.angleDeg : null,
+      method, bottomBracket: [axle.cx, axle.cy], crankPx: method === 'pedal-axle' ? axle.r : null, circleFit: axle.score, loopFit: axle.loopScore ?? null, axleOffset: [axle.s, axle.u], mmPerPx,
+      axisRatio: ellipse ? ellipse.ratio : null, thighLengthRatio: turn ? turn.ratio : null, cameraTurnDeg: turn ? turn.turnDeg : null,
     },
     warnings: [
       ...(method === 'ankle-loop' ? ['The pedal axle could not be located from the feet (no point of the shoe turns in a clean circle: flat pedals, a sliding foot or motion blur). The strokes were cut on the ankle, so the bottom of the stroke is found less precisely (the leg most extended and most bent are not affected), and no millimetres are given.'] : []),
-      ...(method === 'pedal-axle' && axle.score > 0.04 ? ['The crank circle was found only roughly: millimetres are approximate.'] : []),
-      ...(method === 'pedal-axle' && ellipse && ellipse.ratio < 0.94 ? [`The pedal path looks squeezed sideways: the camera may be turned about ${Math.round(ellipse.angleDeg)}° away from square, which distorts angles.`] : []),
+      ...(method === 'pedal-axle' && axle.score > 0.04 ? ['The foot landmarks scatter around the crank circle, so the crank circle is averaged over many strokes: millimetres are approximate, to within about 10 %.'] : []),
+      ...(turn && turn.turnDeg > 20 ? [`The thigh looks shorter in the picture when it is near horizontal than when it is steep: the camera may be turned about ${Math.round(turn.turnDeg)}° away from square to the bike, which distorts the angles.`] : []),
       ...(clean.fsNative < 45 ? [`The video has ${Math.round(clean.fsNative)} frames per second; 60 gives finer measures at the bottom of the stroke.`] : []),
     ],
     steady: { start: clean.t0 + stretch.start / fs, end: clean.t0 + stretch.end / fs },
@@ -276,6 +295,31 @@ export function analyze(track, settings = {}) {
     curves: phaseCurves(ang, phi, all, perStroke),
     loop: { ...representativeLoop(grid, phi, all, perStroke, axle, facing, ang, fs), method },
   };
+}
+
+/**
+ * Is the camera square to the bike? The thigh keeps its length whatever its
+ * angle, but a camera turned away from square shortens it more when it is near
+ * horizontal (top of the stroke) than when it is steep (bottom). Compares the
+ * median thigh length in the two positions and solves for the turn, with
+ * length = L * sqrt(cos^2(a) cos^2(turn) + sin^2(a)) for a thigh a degrees below
+ * the horizontal. The pedal path is no guide: the model itself squashes it a little.
+ */
+function cameraTurn(grid, start, end) {
+  const flat = [], steep = [], flatInc = [], steepInc = [];
+  for (let i = start; i < end; i++) {
+    const hx = grid.hip.x[i], hy = grid.hip.y[i], kx = grid.knee.x[i], ky = grid.knee.y[i];
+    if (![hx, hy, kx, ky].every(Number.isFinite)) continue;
+    const len = Math.hypot(kx - hx, ky - hy);
+    const inc = Math.atan2(ky - hy, Math.abs(kx - hx)); // below the horizontal
+    if (inc < Math.PI / 6) { flat.push(len); flatInc.push(inc); } else if (inc > Math.PI / 4) { steep.push(len); steepInc.push(inc); }
+  }
+  if (flat.length < 30 || steep.length < 30) return null;
+  const ratio = median(flat) / median(steep);
+  const a1 = median(flatInc), a2 = median(steepInc), r2 = ratio * ratio;
+  const c = (Math.sin(a1) ** 2 - r2 * Math.sin(a2) ** 2) / (r2 * Math.cos(a2) ** 2 - Math.cos(a1) ** 2);
+  const turnDeg = ratio >= 1 || !Number.isFinite(c) ? 0 : (Math.acos(Math.sqrt(Math.min(1, Math.max(0, c)))) * 180) / Math.PI;
+  return { ratio, turnDeg };
 }
 
 /** Angle of the ankle-to-hip line from the vertical at fractional index i, positive when the hip is behind the ankle. */

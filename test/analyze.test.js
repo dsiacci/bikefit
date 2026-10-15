@@ -64,6 +64,15 @@ test('the suggested saddle change brings the knee to the middle of the range', (
   assert.equal(low.comparisons[0].verdict, 'above'); // saddle low: the knee stays more bent
 });
 
+test('a camera turned away from square: the thigh test warns, a square camera does not', () => {
+  const square = analyze(makeTrack({ seconds: 40 }).track, { crankMm: 170 });
+  assert.ok(!square.warnings.some((w) => w.includes('turned')));
+  close(square.calibration.cameraTurnDeg, 0, 8, 'square camera');
+  const turned = analyze(makeTrack({ seconds: 40, yaw: 35 }).track, { crankMm: 170 });
+  assert.ok(turned.warnings.some((w) => w.includes('turned')));
+  close(turned.calibration.cameraTurnDeg, 35, 10, 'turned camera');
+});
+
 test('a foot sliding on a flat pedal: strokes from the ankle loop, no millimetres', () => {
   const { track, params } = makeTrack({ seconds: 40, noise: 1.5, slide: 70, seed: 12 });
   const r = analyze(track, { crankMm: 170, ranges: [FIXTURE_RANGE] });
