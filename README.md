@@ -4,11 +4,11 @@ Bike fit angles from a side-view phone video, measured in the browser. You drop 
 
 The video never leaves your device. The page and the model are static files; once the model is loaded, the page locks its own network access (see [Privacy](#privacy)).
 
-⟦live page URL⟧
+Demo video, with the page's synthetic rider: [youtu.be/JUidqkAi33U](https://youtu.be/JUidqkAi33U).
 
 ## Use it
 
-Online: ⟦URL⟧. Locally:
+The page is a set of static files. To serve it from your machine:
 
 ```sh
 npm ci
