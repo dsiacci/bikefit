@@ -2,7 +2,7 @@
 // measure with core/analyze.js, show and export the results.
 
 import { analyze, METRICS } from './core/analyze.js';
-import { trackFromResults } from './core/landmarks.js';
+import { trackFromResults, COUNT, STRIDE } from './core/landmarks.js';
 import { loadLandmarker, extractPoses } from './pose.js';
 import { lockNetwork, lockHolds } from './lock.js';
 import { drawPreview, drawLoopFrame } from './skeleton.js';
@@ -86,6 +86,13 @@ $('sample').addEventListener('click', () => sample());
 $('stop').addEventListener('click', () => controller?.abort());
 $('again').addEventListener('click', () => { show('idle'); $('file').click(); });
 
+// How to film: a checklist in a modal dialog, opened from the steps and the input panel.
+const howto = $('howto');
+for (const b of document.querySelectorAll('[data-howto]')) b.addEventListener('click', () => howto.showModal());
+howto.addEventListener('click', (e) => {
+  if (e.target === howto || e.target.closest('[data-close]')) howto.close();
+});
+
 async function measure(file) {
   if (!file || !landmarker) return;
   const crankMm = Number($('crank').value) || null;
@@ -147,15 +154,66 @@ async function measure(file) {
 
 // An example for visitors without a video: the synthetic rider of the tests,
 // measured by the same code. It needs neither the model nor the network.
-function sample() {
+async function sample() {
   if (state.phase === 'measuring') return;
   const { track, params } = makeTrack({ seconds: 45, noise: 1.5, swapRate: 0.01, dropRate: 0.01, lead: 3, tail: 2, seed: 7 });
+  state.phase = 'measuring';
+  state.result = null;
+  updateRunButton();
+  $('results').hidden = true;
+  show('progress');
+  controller = new AbortController();
+  const done = await replay(track, params.lead, controller.signal);
+  controller = null;
+  if (!done) {
+    state.phase = 'ready';
+    show('idle');
+    updateRunButton();
+    return;
+  }
+  $('progress-text').textContent = 'Measuring the strokes…';
+  await new Promise(requestAnimationFrame);
   const result = analyze(track, { crankMm: params.crank, notchMm: Number($('notch').value) || null });
   result.sample = true;
   result.settings.model = null;
   state.result = result;
   state.phase = 'done';
   render(result);
+  show('idle');
+  updateRunButton();
+}
+
+// A few seconds of the synthetic rider's landmarks in the live view, at their
+// own pace, so the example shows what measuring a video looks like.
+function replay(track, from, signal, seconds = 4) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve(true);
+  const canvas = $('preview');
+  const first = Math.max(0, track.t.findIndex((t) => t >= from));
+  const fps = 1 / (track.t[1] - track.t[0]);
+  const total = Math.min(Math.round(seconds * fps), track.t.length - first);
+  $('progress-text').textContent = 'Synthetic rider: a few seconds of its landmarks, no video and no pose model.';
+  return new Promise((resolve) => {
+    const start = performance.now();
+    const tick = (now) => {
+      if (signal.aborted) { resolve(false); return; }
+      const k = Math.min(total - 1, Math.floor((Math.max(0, now - start) / 1000) * fps));
+      const landmarks = frameLandmarks(track, first + k);
+      if (landmarks) drawPreview(canvas, landmarks, { aspect: track.width / track.height }); // a dropped frame keeps the last drawing
+      $('bar').value = (k + 1) / total;
+      if (k >= total - 1) resolve(true);
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+function frameLandmarks(track, f) {
+  const out = [];
+  for (let i = 0; i < COUNT; i++) {
+    const o = (f * COUNT + i) * STRIDE;
+    out.push({ x: track.data[o] / track.width, y: track.data[o + 1] / track.height, visibility: track.data[o + 3] });
+  }
+  return Number.isFinite(out[0].x) ? out : null;
 }
 
 function render(r) {
@@ -166,6 +224,7 @@ function render(r) {
   $('knee-big').textContent = fmt(s.kneeFlexBdc.median, '°');
   $('knee-spread').textContent = `Middle half of your strokes: ${fmt(s.kneeFlexBdc.q1, '°')} to ${fmt(s.kneeFlexBdc.q3, '°')}, over ${s.kneeFlexBdc.n} clean strokes. 0° would be a straight leg.`;
   const kc = comps.kneeFlexBdc ?? null;
+  meter($('knee-meter'), s.kneeFlexBdc, kc);
   $('knee-verdict').textContent = verdictSentence(kc);
   $('knee-verdict').dataset.v = kc ? kc.verdict : 'none';
   $('saddle-text').textContent = saddleSentence(r.saddle, Boolean(r.settings.crankMm), r.calibration.method);
@@ -208,8 +267,12 @@ function render(r) {
     cells.forEach((text, k) => {
       const td = document.createElement(k === 0 ? 'th' : 'td');
       if (k === 0) td.scope = 'row';
-      td.textContent = text;
-      if (k === 4 && c) td.className = c.evidence === 'peer-reviewed' ? `v-${c.verdict}` : 'v-guide';
+      if (k === 4 && c) {
+        const pill = document.createElement('span');
+        pill.className = `pill ${c.evidence === 'peer-reviewed' ? `v-${c.verdict}` : 'v-guide'}`;
+        pill.textContent = text;
+        td.append(pill);
+      } else td.textContent = text;
       tr.append(td);
     });
     return tr;
@@ -254,6 +317,20 @@ function render(r) {
   $('dl-json').onclick = () => save(`${FILE_PREFIX}-numbers-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ ...r, loop: undefined }, null, 1), 'application/json');
   $('results').hidden = false;
   $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+
+// The median against the published range, on a strip from straighter to more bent.
+function meter(el, stat, range) {
+  el.hidden = !range;
+  if (!range) return;
+  const lo = Math.min(20, Math.floor((stat.q1 - 6) / 5) * 5);
+  const hi = Math.max(55, Math.ceil((stat.q3 + 6) / 5) * 5);
+  const pct = (v) => `${(100 * (Math.min(hi, Math.max(lo, v)) - lo)) / (hi - lo)}%`;
+  for (const [name, v] of [['--band-from', range.low], ['--band-to', range.high], ['--iqr-from', stat.q1], ['--iqr-to', stat.q3], ['--mark', stat.median]]) {
+    el.style.setProperty(name, pct(v));
+  }
+  el.querySelector('.meter-low').textContent = fmt(range.low, '°', 0);
+  el.querySelector('.meter-high').textContent = fmt(range.high, '°', 0);
 }
 
 function save(name, text, type) {

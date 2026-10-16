@@ -15,19 +15,25 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.json': 'application/json',
   '.txt': 'text/plain; charset=utf-8',
+  '.woff2': 'font/woff2',
   '.wasm': 'application/wasm',
   '.task': 'application/octet-stream',
   '.tflite': 'application/octet-stream',
 };
 
-export function startServer(port = 8080, host = '127.0.0.1') {
+/** `mounts` maps extra URL prefixes to folders, e.g. { '/__demo/': 'tools/demo' } for the demo recorder. */
+export function startServer(port = 8080, host = '127.0.0.1', mounts = {}) {
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
-      let path = normalize(decodeURIComponent(url.pathname)).replace(/^([/\\])+/, '');
+      let root = ROOT, pathname = url.pathname;
+      for (const [prefix, dir] of Object.entries(mounts)) {
+        if (pathname.startsWith(prefix)) { root = resolve(dir); pathname = pathname.slice(prefix.length); break; }
+      }
+      let path = normalize(decodeURIComponent(pathname)).replace(/^([/\\])+/, '');
       if (path === '' || path.endsWith('/')) path += 'index.html';
-      const file = join(ROOT, path);
-      if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; }
+      const file = join(root, path);
+      if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
       const info = await stat(file);
       if (!info.isFile()) { res.writeHead(404).end(); return; }
       res.writeHead(200, {

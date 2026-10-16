@@ -18,11 +18,15 @@ npm run serve   # http://127.0.0.1:8080
 
 ### How to film
 
-1. Phone on a tripod, landscape, main lens (1×), 1080p at 60 frames per second if you can (on an iPhone: Camera, Formats, Most Compatible).
-2. Side view from the drive side, 2 to 3 m away, lens at hip height, square to the bike, phone level.
+The page shows this checklist too (How to film).
+
+1. Phone on a tripod, landscape, main lens (1×), 1080p at 60 frames per second if you can (on an iPhone: Settings › Camera › Formats › Most Compatible).
+2. Square to the bike, from the drive side, 2 to 3 m away, lens at hip height, phone level.
 3. The whole bike and you in the frame, head included: the pose detector finds people by their face.
-4. Close-fitting clothes, light in front of you, not behind.
-5. About a minute of steady pedalling, seated, easy effort, hands where they usually are.
+4. Shoes clipped in: the pedal axle gives the scale in millimetres. With flat pedals you still get the angles.
+5. Light in front of you, not behind, and close-fitting clothes.
+6. About a minute of steady pedalling, seated, easy effort, hands where they usually are.
+7. Your crank length: it is printed on the inside of the crank arm.
 
 ## How it works
 
@@ -140,9 +144,16 @@ node tools/experiment.mjs private/experiment.json --out docs/results.md
 
 Videos, landmarks and measurements of real riders live in `private/`, which git ignores.
 
+The demo video is recorded from the page the same way, with the synthetic rider, so no real person appears: titles, highlights and a cursor are drawn over the page ([`tools/demo/`](tools/demo/)), and each scene is paced on its voice-over clip, one MP3 per scene of [`tools/demo/scenes.json`](tools/demo/scenes.json). It needs ffmpeg:
+
+```sh
+node tools/demo.mjs --out private/demo --voice private/demo/voice
+```
+
 ## Licenses
 
 - **This code:** Apache License 2.0 ([LICENSE](LICENSE), [NOTICE](NOTICE)).
 - **MediaPipe Tasks Vision** 0.10.35 (`@mediapipe/tasks-vision` on npm), the WebAssembly runtime that runs the model: Apache License 2.0, source at [google-ai-edge/mediapipe](https://github.com/google-ai-edge/mediapipe). It is pinned before 1.0 on purpose: the npm builds from 1.0.0 on send usage metrics to `odml.pa.googleapis.com` every minute, as Google's [privacy notice](https://goo.gle/mediapipe-privacy) says; 0.10.35 has no such code. The page's Content-Security-Policy would block that host in any case.
 - **Pose Landmarker models** (BlazePose GHUM 3D, lite, full and heavy, float16 version 1): Apache License 2.0 according to their [model card](https://storage.googleapis.com/mediapipe-assets/Model%20Card%20BlazePose%20GHUM%203D.pdf). They are downloaded at build time and checked against the SHA-256 in [`tools/assets.json`](tools/assets.json), not stored here. References: Bazarevsky et al., *BlazePose: On-device Real-time Body Pose tracking*, CVPR Workshop on Computer Vision for Augmented and Virtual Reality, 2020 ([arXiv:2006.10204](https://arxiv.org/abs/2006.10204)); *GHUM & GHUML: Generative 3D Human Shape and Articulated Pose Models*, CVPR 2020, pp. 6184–6193.
-- **Playwright** 1.63.0 (Apache License 2.0) runs the experiments in headless Chromium. It is not part of the page.
+- **Barlow** and **Barlow Condensed**, the fonts of the page (The Barlow Project Authors): SIL Open Font License 1.1 ([`web/fonts/OFL.txt`](web/fonts/OFL.txt)), served by the page itself.
+- **Playwright** 1.63.0 (Apache License 2.0) runs the experiments and records the demo in headless Chromium. It is not part of the page.

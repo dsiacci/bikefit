@@ -1,0 +1,64 @@
+/* Titles, captions, highlights and a cursor drawn over the page for the demo
+   video. Loaded by tools/demo.mjs only, never by the page itself. */
+
+#demo-overlay {
+  position: fixed; inset: 0; width: 100vw; height: 100vh; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0; background: transparent; color: #f4f6f5; overflow: visible;
+  pointer-events: none; font-family: "Barlow", system-ui, sans-serif;
+}
+#demo-overlay * { box-sizing: border-box; }
+
+/* Highlight: a yellow ring, the rest of the screen slightly dimmed. */
+.d-ring { position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 16px; opacity: 0; transition: opacity 0.35s ease; box-shadow: 0 0 0 3px #f1c40f, 0 0 0 9px rgba(241, 196, 15, 0.18), 0 0 0 100vmax rgba(12, 18, 29, 0.4); }
+.d-ring.on { opacity: 1; }
+
+/* Lower third: step number, step name, caption. */
+.d-lower { position: absolute; left: 32px; bottom: 30px; display: flex; max-width: calc(100vw - 64px); border-radius: 14px; overflow: hidden; background: rgba(27, 36, 51, 0.95); box-shadow: 0 14px 40px rgba(8, 13, 22, 0.4); opacity: 0; transform: translateY(16px); transition: opacity 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.d-lower.on { opacity: 1; transform: none; }
+.d-lower .n { display: grid; place-items: center; min-width: 64px; padding: 0 16px; background: #f1c40f; color: #1b2433; font: 700 32px/1 "Barlow Condensed", sans-serif; }
+.d-lower .n:empty { display: none; }
+.d-lower .t { padding: 12px 22px 14px 20px; }
+.d-lower .k { font: 600 14px/1.1 "Barlow Condensed", sans-serif; letter-spacing: 0.18em; text-transform: uppercase; color: #8fd3c5; }
+.d-lower .c { margin-top: 4px; font: 700 28px/1.12 "Barlow Condensed", sans-serif; letter-spacing: 0.02em; }
+
+/* Cursor and click. */
+.d-cursor { position: absolute; left: 0; top: 0; width: 30px; height: 30px; opacity: 0; transform: translate(1150px, 690px); transition: transform 0.8s cubic-bezier(0.45, 0.05, 0.25, 1), opacity 0.3s; filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35)); }
+.d-cursor.on { opacity: 1; }
+.d-cursor svg { display: block; width: 100%; height: 100%; }
+.d-click { position: absolute; left: 0; top: 0; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 3px solid #f1c40f; opacity: 0; }
+.d-click.go { animation: d-click 0.55s ease-out; }
+@keyframes d-click { from { opacity: 1; transform: scale(0.25); } to { opacity: 0; transform: scale(1.25); } }
+
+/* Full-screen cards: the title, the measurements, the end. */
+.d-card {
+  position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transition: opacity 0.6s ease;
+  background:
+    radial-gradient(55% 80% at 72% 50%, rgba(13, 116, 101, 0.45), transparent 72%),
+    linear-gradient(rgba(143, 211, 197, 0.06) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgba(143, 211, 197, 0.06) 1px, transparent 1px) 0 0 / 28px 28px,
+    #1b2433;
+}
+.d-card.on { opacity: 1; }
+.d-card.instant { transition: none; }
+.d-card::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 16px; background: repeating-linear-gradient(90deg, rgba(232, 217, 181, 0.85) 0 2px, transparent 2px 70px) left bottom / 100% 16px no-repeat, repeating-linear-gradient(90deg, rgba(232, 217, 181, 0.45) 0 1px, transparent 1px 14px) left bottom / 100% 8px no-repeat; }
+.d-center { display: grid; justify-items: center; text-align: center; gap: 14px; padding: 40px; }
+.d-logo { width: 84px; height: 84px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+.d-brand { font: 700 88px/0.95 "Barlow Condensed", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+.d-sub { max-width: 30ch; color: #c9d3dc; font: 400 30px/1.3 "Barlow", sans-serif; }
+.d-sub em { font-style: normal; color: #f1c40f; }
+.d-meta { margin-top: 6px; color: #8fd3c5; font: 600 18px/1.2 "Barlow Condensed", sans-serif; letter-spacing: 0.2em; text-transform: uppercase; }
+.d-eyebrow { color: #8fd3c5; font: 600 20px/1.2 "Barlow Condensed", sans-serif; letter-spacing: 0.22em; text-transform: uppercase; }
+.d-row { display: flex; align-items: center; justify-content: center; gap: 28px; }
+.d-big { font: 700 150px/0.9 "Barlow Condensed", sans-serif; font-variant-numeric: tabular-nums; }
+.d-big.hl { color: #f1c40f; }
+.d-arrow { width: 90px; height: 50px; fill: none; stroke: #8fd3c5; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.d-note { max-width: 40ch; color: #c9d3dc; font: 400 24px/1.35 "Barlow", sans-serif; }
+.d-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; margin-top: 18px; }
+.d-chip { display: flex; align-items: baseline; gap: 12px; padding: 14px 22px; border-radius: 14px; background: rgba(244, 246, 245, 0.07); border: 1px solid rgba(244, 246, 245, 0.16); color: #c9d3dc; font: 400 22px/1.2 "Barlow", sans-serif; }
+.d-chip b { color: #f4f6f5; font: 700 44px/1 "Barlow Condensed", sans-serif; }
+.d-url { margin-top: 8px; padding: 12px 24px; border-radius: 999px; background: #f4f6f5; color: #1b2433; font: 700 30px/1 "Barlow Condensed", sans-serif; letter-spacing: 0.04em; }
+.d-credits { margin-top: 18px; color: #93a1b0; font: 400 18px/1.4 "Barlow", sans-serif; }
+
+/* Staged reveal inside a card. */
+.d-step { opacity: 0; transform: translateY(18px); transition: opacity 0.55s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.d-step.on { opacity: 1; transform: none; }

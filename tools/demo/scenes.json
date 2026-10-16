@@ -1,0 +1,14 @@
+{
+  "about": "The voice-over of the demo video, one clip per scene. tools/demo.mjs paces each scene on its clip (voice/<id>.mp3) when --voice is given. The clips of the published demo were made with ElevenLabs (model eleven_v4, voice Matilda); any text-to-speech works.",
+  "scenes": [
+    { "id": "intro", "say": "Is your saddle at the right height? Saddle Check answers from a phone video, right in your browser." },
+    { "id": "film", "say": "First, film yourself from the side: phone on a tripod, the whole bike in the frame, shoes clipped in, and about a minute of steady pedalling." },
+    { "id": "drop", "say": "Then drop your video here. The page reads it on your device, and once its pose model is loaded, it cuts its own network: nothing is uploaded." },
+    { "id": "sample", "say": "For this demo, a synthetic rider stands in, so no real person appears. With your own video, an open pose model finds your joints in every frame." },
+    { "id": "knee", "say": "You get the knee bend at the bottom of each stroke, against the range published for riders measured while pedalling," },
+    { "id": "saddle", "say": "and the saddle change, in millimetres, that would bring you to the middle of it." },
+    { "id": "details", "say": "Then every other angle, next to book or manufacturer guidelines, and a report to download and keep." },
+    { "id": "proof", "say": "Tested on a home trainer: one saddle letter higher, the knee bent 4.8 degrees less, and three takes at the same height agreed within 0.7 degrees." },
+    { "id": "outro", "say": "Saddle Check is free and open source. Try it on your own bike." }
+  ]
+}

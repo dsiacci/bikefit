@@ -19,6 +19,8 @@ function palette(canvas) {
     arc: v('--arc', '#c26a00'),
     grid: v('--grid', '#d6dddf'),
     ink: v('--ink', '#14212a'),
+    label: v('--stage-label', v('--ink', '#14212a')),
+    font: v('--display', 'system-ui, -apple-system, "Segoe UI", sans-serif'),
   };
 }
 
@@ -159,8 +161,8 @@ function drawKneeArc(ctx, H, K, A, angleDeg, c, s) {
   ctx.arc(K[0], K[1], r, a1, a1 + d, d < 0);
   ctx.stroke();
   const mid = a1 + d / 2;
-  ctx.fillStyle = c.ink;
-  ctx.font = '600 15px system-ui, -apple-system, "Segoe UI", sans-serif';
+  ctx.fillStyle = c.label;
+  ctx.font = `700 18px ${c.font}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(`${Math.round(180 - angleDeg)}°`, K[0] + Math.cos(mid) * (r + 20), K[1] + Math.sin(mid) * (r + 20));

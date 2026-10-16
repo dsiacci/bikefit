@@ -6,29 +6,98 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Saddle Check</title>
 <meta name="description" content="Bike fit angles from a side-view phone video, measured in your browser by an open pose model. The video never leaves your device.">
+<meta name="theme-color" content="#1b2433">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/barlow-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 <script type="module" src="app.js"></script>
 </head>
 <body>
 <header class="bar">
-  <a class="brand" href="./"><img src="icon.svg" alt="" width="28" height="28"><span class="app-name">Saddle Check</span></a>
-  <p class="lock" id="lock" data-state="loading"><span class="lock-dot" aria-hidden="true"></span><span id="lock-text">Loading the pose model…</span></p>
+  <div class="wrap bar-inner">
+    <a class="brand" href="./"><img src="icon.svg" alt="" width="32" height="32"><span class="app-name">Saddle Check</span></a>
+    <p class="lock" id="lock" data-state="loading"><span class="lock-dot" aria-hidden="true"></span><span id="lock-text">Loading the pose model…</span></p>
+  </div>
 </header>
 
-<main>
-  <section class="intro">
-    <h1>Bike fit angles from a phone video</h1>
-    <p class="lede">Film yourself pedalling, seen from the side. An open pose model runs inside this page and measures your knee, hip, ankle, trunk and arms at every pedal stroke, then compares the medians with published ranges. Your video stays on your device: nothing is uploaded.</p>
-  </section>
+<section class="hero" aria-labelledby="page-title">
+  <div class="wrap hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow">Bike fit · side-view video · in your browser</p>
+      <h1 id="page-title">Check your <span class="hl">saddle height</span> from a phone video</h1>
+      <p class="lede">Film yourself pedalling, seen from the side. An open pose model runs inside this page and measures your knee, hip, ankle, trunk and arms at every pedal stroke, then compares the medians with published ranges. Your video stays on your device: nothing is uploaded.</p>
+    </div>
+    <figure class="hero-art" aria-hidden="true">
+      <svg class="rider-art" viewBox="0 0 520 340" focusable="false">
+        <path class="vf" d="M14 40V14H40 M480 14H506V40 M506 300V326H480 M40 326H14V300"/>
+        <circle class="rec-dot" cx="36" cy="36" r="5"/>
+        <text class="rec" x="48" y="41">REC · 60 FPS</text>
+        <circle class="wheel" cx="118" cy="256" r="62"/>
+        <circle class="wheel" cx="398" cy="256" r="62"/>
+        <circle class="hub" cx="118" cy="256" r="4"/>
+        <circle class="hub" cx="398" cy="256" r="4"/>
+        <path class="frame" d="M246 262 L220 150 L352 140 L360 170 Z M246 262 L118 256 L220 150 M360 170 L398 256 M352 140 L368 134"/>
+        <path class="bar-h" d="M368 134 Q392 128 388 150 Q384 166 370 162"/>
+        <path class="post" d="M220 150 L213 126"/>
+        <path class="saddle" d="M192 124 L236 124"/>
+        <circle class="crank-circle" cx="246" cy="262" r="30"/>
+        <path class="crank" d="M246 262 L251.2 291.5"/>
+        <path class="thigh-ext" d="M255.5 192.9 L274.8 232.4"/>
+        <path class="bone" d="M216 112 L255.5 192.9 L238 275"/>
+        <path class="bone foot" d="M238 275 L226 285 L266 291 Z"/>
+        <path class="bone" d="M216 112 L302.2 34.4 L315 27 M302.2 34.4 L336 80 L372 128"/>
+        <circle class="head" cx="324" cy="21" r="13"/>
+        <path class="arc" d="M268.7 219.9 A30 30 0 0 1 249.2 222.2"/>
+        <text class="arc-label" x="284" y="258">38°</text>
+        <circle class="joint" cx="216" cy="112" r="5.5"/>
+        <circle class="joint" cx="255.5" cy="192.9" r="5.5"/>
+        <circle class="joint" cx="238" cy="275" r="5.5"/>
+        <circle class="joint" cx="302.2" cy="34.4" r="5.5"/>
+        <circle class="joint" cx="336" cy="80" r="5.5"/>
+        <circle class="pedal" cx="251.2" cy="291.5" r="4.5"/>
+      </svg>
+    </figure>
+  </div>
+</section>
+
+<main class="wrap">
+  <ol class="steps" aria-label="How it works">
+    <li class="step" id="step-film">
+      <span class="step-n" aria-hidden="true">01</span>
+      <div>
+        <p class="step-title">Film from the side</p>
+        <p>A minute of steady pedalling, phone on a tripod.</p>
+        <button type="button" class="link-btn" data-howto><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="4" width="9" height="8" rx="1.5"/><path d="M10.5 7 14.5 4.8v6.4L10.5 9"/></svg>How to film</button>
+      </div>
+    </li>
+    <li class="step" id="step-drop">
+      <span class="step-n" aria-hidden="true">02</span>
+      <div>
+        <p class="step-title">Drop the video</p>
+        <p>The page opens it on your device. Nothing is uploaded.</p>
+      </div>
+    </li>
+    <li class="step" id="step-read">
+      <span class="step-n" aria-hidden="true">03</span>
+      <div>
+        <p class="step-title">Read your angles</p>
+        <p>Knee bend at the bottom of each stroke, and the saddle change in millimetres.</p>
+      </div>
+    </li>
+  </ol>
 
   <div class="layout">
     <section class="panel" id="input-panel" aria-labelledby="input-title">
-      <h2 id="input-title">Your video</h2>
+      <div class="panel-head">
+        <h2 id="input-title">Your video</h2>
+        <button type="button" class="link-btn" data-howto><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="4" width="9" height="8" rx="1.5"/><path d="M10.5 7 14.5 4.8v6.4L10.5 9"/></svg>How to film</button>
+      </div>
       <label class="drop" id="drop" for="file">
         <input type="file" id="file" accept="video/*">
+        <svg class="drop-icon" viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="9" width="24" height="22" rx="4"/><path d="M28 17 36 12v16l-8-5"/><path d="M16 15v10 M11.5 20.5 16 25l4.5-4.5"/></svg>
         <span class="drop-main" id="drop-main">Choose a video, or drop it here</span>
-        <span class="drop-sub">MP4 or MOV, about a minute of steady pedalling</span>
+        <span class="drop-sub">MP4 or MOV, about a minute of steady pedalling. It stays on this device.</span>
       </label>
       <div class="fields">
         <div class="field">
@@ -63,22 +132,24 @@
         </div>
         <label class="check"><input type="checkbox" id="show-frames"> Show the video picture behind the skeleton while measuring</label>
       </details>
-      <button type="button" class="primary" id="run" disabled>Measure</button>
-      <button type="button" class="secondary" id="sample">No video at hand? See a synthetic rider</button>
-      <details class="howto" open>
-        <summary>How to film</summary>
-        <ol>
-          <li>Phone on a tripod, landscape, main lens (1×), 1080p at 60 frames per second if you can.</li>
-          <li>Side view from the drive side, 2 to 3 metres away, lens at hip height, square to the bike.</li>
-          <li>The whole bike and you in the frame, head included: the model finds people by their face.</li>
-          <li>Close-fitting clothes, light in front of you, not behind.</li>
-          <li>About a minute of steady pedalling, seated, easy effort, hands where they usually are.</li>
-        </ol>
-      </details>
+      <div class="actions">
+        <button type="button" class="primary" id="run" disabled>Measure</button>
+        <button type="button" class="secondary" id="sample">No video at hand? See a synthetic rider</button>
+      </div>
     </section>
 
-    <section class="panel" id="work-panel" aria-live="polite">
+    <section class="panel work" id="work-panel" aria-live="polite">
       <div id="idle">
+        <div class="stage stage-idle" aria-hidden="true">
+          <svg class="idle-art" viewBox="0 0 320 180" focusable="false">
+            <g transform="translate(52 6) scale(0.52)">
+              <circle class="idle-circle" cx="246" cy="262" r="30"/>
+              <path class="idle-bone" d="M216 112 L255.5 192.9 L238 275 M238 275 L226 285 L266 291 Z M216 112 L302.2 34.4 M302.2 34.4 L336 80 L372 128"/>
+              <circle class="idle-head" cx="324" cy="21" r="13"/>
+            </g>
+          </svg>
+          <p class="idle-text">Your skeleton appears here while the page reads the video, on a plain background.</p>
+        </div>
         <h2>What you get</h2>
         <ul class="gets">
           <li>How much your knee is still bent at the bottom of the stroke, stroke by stroke: the angle the knee-angle methods for saddle height look at.</li>
@@ -110,6 +181,11 @@
       <div class="headline">
         <p class="kicker">Knee bend at the bottom of the stroke</p>
         <p class="big" id="knee-big">–</p>
+        <div class="meter" id="knee-meter" hidden>
+          <div class="meter-track" aria-hidden="true"><span class="meter-band"></span><span class="meter-iqr"></span><span class="meter-mark"></span></div>
+          <div class="meter-scale" aria-hidden="true"><span class="meter-low"></span><span class="meter-high"></span></div>
+          <div class="meter-ends" aria-hidden="true"><span>Straighter leg</span><span>More bent</span></div>
+        </div>
         <p class="spread" id="knee-spread"></p>
         <p class="verdict" id="knee-verdict"></p>
         <p class="saddle" id="saddle-text"></p>
@@ -158,8 +234,53 @@
 </main>
 
 <footer class="foot">
-  <p>Pose model: <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker">MediaPipe Pose Landmarker</a> by Google, Apache License 2.0, served by this site and run in your browser. Code: <a id="code-link" href="https://github.com/dsiacci/bikefit">github.com/dsiacci/bikefit</a>, Apache License 2.0.</p>
+  <div class="wrap">
+    <p>Pose model: <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker">MediaPipe Pose Landmarker</a> by Google, Apache License 2.0, served by this site and run in your browser. Code: <a id="code-link" href="https://github.com/dsiacci/bikefit">github.com/dsiacci/bikefit</a>, Apache License 2.0. Fonts: Barlow and Barlow Condensed, SIL Open Font License 1.1.</p>
+  </div>
 </footer>
+
+<dialog class="modal" id="howto" aria-labelledby="howto-title">
+  <div class="modal-head">
+    <p class="eyebrow">Before you film</p>
+    <h2 id="howto-title">How to film</h2>
+    <p class="modal-sub">Five minutes of setup, for angles you can trust.</p>
+    <button type="button" class="modal-close" data-close aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+  </div>
+  <div class="modal-body">
+    <figure class="howto-art">
+      <svg viewBox="0 0 240 236" focusable="false" aria-hidden="true">
+        <text class="ha-label" x="120" y="22">THE BIKE, SEEN FROM ABOVE</text>
+        <path class="ha-fov" d="M120 192 L14 66 L226 66 Z"/>
+        <path class="ha-frame" d="M50 52 L190 52"/>
+        <rect class="ha-wheel" x="20" y="48" width="58" height="8" rx="4"/>
+        <rect class="ha-wheel" x="162" y="48" width="58" height="8" rx="4"/>
+        <rect class="ha-saddle" x="84" y="46" width="22" height="12" rx="5"/>
+        <path class="ha-bar" d="M190 36 L190 68"/>
+        <text class="ha-small" x="64" y="84">drive side</text>
+        <path class="ha-sight" d="M120 186 L120 60"/>
+        <path class="ha-square" d="M120 72 L132 72 L132 60"/>
+        <text class="ha-dim" x="128" y="134">2–3 m</text>
+        <path class="ha-tripod" d="M120 200 L100 222 M120 200 L140 222 M120 200 L120 228"/>
+        <rect class="ha-phone" x="102" y="190" width="36" height="9" rx="2.5"/>
+      </svg>
+      <figcaption>Square to the bike, 2 to 3 metres away, lens at hip height, the whole bike in the frame.</figcaption>
+    </figure>
+    <ol class="checklist">
+      <li><strong>Phone on a tripod</strong>, landscape, main lens (1×), 1080p at 60 frames per second if you can.</li>
+      <li><strong>Square to the bike</strong>, from the drive side, 2 to 3 metres away, lens at hip height.</li>
+      <li><strong>The whole bike and you in the frame</strong>, head included: the model finds people by their face.</li>
+      <li><strong>Shoes clipped in.</strong> The pedal axle gives the scale in millimetres; with flat pedals you still get the angles.</li>
+      <li><strong>Light in front of you</strong>, not behind, and close-fitting clothes.</li>
+      <li><strong>About a minute of steady pedalling</strong>, seated, easy effort, hands where they usually are.</li>
+      <li><strong>Your crank length</strong>: it is printed on the inside of the crank arm.</li>
+    </ol>
+  </div>
+  <p class="tip">On an iPhone: Settings › Camera › Formats › Most Compatible, so that every browser can read the video.</p>
+  <div class="modal-foot">
+    <button type="button" class="primary" data-close>Got it</button>
+  </div>
+</dialog>
+
 <div class="tooltip" id="tooltip" role="status" hidden></div>
 <video id="video" muted playsinline class="offscreen"></video>
 </body>
